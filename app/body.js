@@ -442,30 +442,19 @@ async function m2SaveBloodTests() {
     if(errEl){ errEl.style.display='block'; errEl.textContent='Inserisci la data dell\'esame.'; } return;
   }
   const get = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
-  const payload = {
-    user_id: ST.user.id,
-    test_date: date,
-    hemoglobin:      get('m2-bl-hemo'),
-    ferritin:        get('m2-bl-ferr'),
-    glucose:         get('m2-bl-gluc'),
-    cholesterol_tot: get('m2-bl-chol'),
-    hdl:             get('m2-bl-hdl'),
-    triglycerides: get('m2-bl-trig'),
-    creatinine:    get('m2-bl-crea'),
-    alt:           get('m2-bl-alt'),
-    vitamin_d:     get('m2-bl-vitd'),
-    vitamin_b12:   get('m2-bl-b12'),
-    tsh:           get('m2-bl-tsh'),
-  };
+  const payload = { user_id: ST.user.id, test_date: date };
+  // Body 160: solo le caselle compilate (come body_logs): su una data che ha già le righe del referto, le colonne
+  // vuote del check non cancellano quelle lette
+  [['hemoglobin', 'm2-bl-hemo'], ['ferritin', 'm2-bl-ferr'], ['glucose', 'm2-bl-gluc'], ['cholesterol_tot', 'm2-bl-chol'], ['hdl', 'm2-bl-hdl'], ['triglycerides', 'm2-bl-trig'], ['creatinine', 'm2-bl-crea'], ['alt', 'm2-bl-alt'], ['vitamin_d', 'm2-bl-vitd'], ['vitamin_b12', 'm2-bl-b12'], ['tsh', 'm2-bl-tsh']]
+    .forEach(([col, id]) => { const v = get(id); if(v != null) payload[col] = v; });
   ST.m2.bloodTests = payload;
-  try {
-    const { error } = await supa.from('blood_tests').insert(payload);
-    if(error) throw error;
-    ST.bloodTests = null;          // Metodo 220: lo storico nelle Impostazioni si rilegge alla prossima apertura
-    m2GoStep('s12');
-  } catch(e) {
-    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore salvataggio esami: '+e.message; }
-  }
+  // una riga per persona e prelievo (UNIQUE user_id+test_date): il check scrive o aggiorna; la fonte diventa 'check'
+  // solo se quella data non ha già le righe di un referto letto
+  const giaLetta = Array.isArray(ST.bloodTests) && ST.bloodTests.some(r => r.test_date === date && Array.isArray(r.esami) && r.esami.length);
+  const { error } = await dbq('salvare gli esami del check', supa.from('blood_tests').upsert(giaLetta ? payload : { ...payload, fonte:'check' }, { onConflict:'user_id,test_date' }));
+  if(error){ if(errEl){ errEl.style.display='block'; errEl.textContent='Non riesco a salvare gli esami adesso: riprova.'; } return; }
+  ST.bloodTests = null;          // la scheda Analisi li rilegge alla prossima apertura
+  m2GoStep('s12');
 }
 
 // Esito: marca body_checks completato, mostra summary, va all'app
@@ -570,81 +559,27 @@ const BLOOD_FIELDS = [
   { key:'tsh',             label:'TSH',              unit:'µUI/mL' },
 ];
 const BLOOD_MEDICO = 'Valori da rivedere con il tuo medico';
-const BLOOD_VISIBLE_DEFAULT = 12;   // quanti esami si vedono senza "mostra altri"
 
+// Body 160: l'unica lettura della scheda Analisi, con dbq; se fallisce quello che c'era resta e ST.bloodLetturaFallita
+// lo dice (Body 110: «non caricato» non è «vuoto»)
 async function loadBloodTests(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bloodTests = []; return; }
-  const res = await supa.from('blood_tests')
+  const res = await dbq('leggere le analisi del sangue', supa.from('blood_tests')
     .select('*')
     .eq('user_id', ST.user.id)
     .order('test_date', { ascending:false })
-    .limit(200);
+    .limit(200), { silenzioso:true });
   if(res.error){                       // L22 — supabase-js non lancia: si controlla a mano
-    console.warn('[blood] storico non caricato:', res.error.message);
-    if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];   // Body 110: quello che c'era resta; «non caricato» lo dice il ritorno
+    ST.bloodLetturaFallita = true;
+    if(!Array.isArray(ST.bloodTests)) ST.bloodTests = null;   // mai «vuoto» per una lettura fallita
     return false;
   }
+  ST.bloodLetturaFallita = false;
   ST.bloodTests = res.data || [];
   return true;
 }
 
-// Card "Esami del sangue" — storico in sola lettura. Dal 14 ottobre 2026 (Metodo 220) non sta più in coda al tab
-// Check: è nelle Impostazioni, pagina «Salute ed esami del sangue» (_setEsamiStorico).
-// Nessuna interpretazione: i valori si leggono, non si giudicano (l'analisi del
-// coach arriva in Fase 4).
-function _bloodHistoryHTML(){
-  const rows = ST.bloodTests;
-  const card = (inner) => `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-top:14px;box-shadow:var(--shadow);">
-      <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Esami del sangue</div>
-      ${inner}</div>`;
-  if(rows === null || rows === undefined) return card(`<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Caricamento…</div>`);
-  if(rows.length === 0){
-    return card(`<div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;">Non hai ancora registrato esami del sangue.<br>Li puoi aggiungere durante un check fisico: restano qui, in ordine di data.</div>`);
-  }
-  const tutti = !!ST.bloodShowAll;
-  const visibili = tutti ? rows : rows.slice(0, BLOOD_VISIBLE_DEFAULT);
-  const righe = visibili.map(r => {
-    const aperto = ST.bloodOpenId === r.id;
-    const data = r.test_date ? fmtDate(r.test_date) : '—';
-    const valori = BLOOD_FIELDS.filter(f => r[f.key] != null);
-    const dettaglio = aperto ? `
-      <div style="padding:4px 0 2px;">
-        ${valori.length === 0
-          ? `<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Nessun valore registrato per questa data.</div>`
-          : valori.map(f => `
-          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--s2);">
-            <span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${f.label}</span>
-            <span style="font-size:12px;font-family:var(--font-mono);color:var(--t1);font-weight:700;">${r[f.key]} ${f.unit}</span>
-          </div>`).join('')}
-        <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:10px;">${BLOOD_MEDICO}</div>
-      </div>` : '';
-    return `
-      <div style="border-bottom:1px solid var(--s2);">
-        <div onclick="toggleBloodTest('${r.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;cursor:pointer;">
-          <span style="font-size:13px;color:var(--t1);font-family:var(--font-mono);">${data}</span>
-          <span style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${valori.length} valori</span>
-            <span style="font-size:13px;color:var(--t3);">${aperto ? '⌄' : '›'}</span>
-          </span>
-        </div>
-        ${dettaglio}
-      </div>`;
-  }).join('');
-  const altri = rows.length > BLOOD_VISIBLE_DEFAULT
-    ? `<div style="text-align:center;margin-top:10px;">
-        <button onclick="ST.bloodShowAll=${tutti ? 'false' : 'true'};_bloodRidisegna();" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#5E4A7A;font-family:var(--font-sans);padding:4px;">${tutti ? 'Mostra meno' : `Mostra altri ${rows.length - BLOOD_VISIBLE_DEFAULT} →`}</button>
-      </div>` : '';
-  return card(righe + altri);
-}
-
-function toggleBloodTest(id){
-  ST.bloodOpenId = (ST.bloodOpenId === id) ? null : id;
-  _bloodRidisegna();
-}
-// Dal 14 ottobre 2026 (Metodo 220) lo storico sta nelle Impostazioni, «Salute ed esami del sangue»: si ridisegna lì.
-function _bloodRidisegna(){
-  if(typeof _setEsamiStorico === 'function') _setEsamiStorico();
-}
+// Lo storico delle analisi (Body 160, 2 novembre 2026) sta nella scheda «Analisi» del Body: app/analisi.js.
 
 // Body 110 (13 ottobre 2026): «non caricato» non è «vuoto». Le letture passano da dbq; se una fallisce
 // resta in memoria quello che c'era (anche dalla copia locale) e ST.bodyLetturaFallita lo dice: il tab
@@ -657,7 +592,7 @@ async function loadBodyLogs(){
   // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
   // + weight_logs: le pesate rapide fanno parte del "peso attuale" (weighInsByDay, L47).
   // blood_tests non più da qui (Metodo 220, 14 ottobre 2026): lo storico sta nelle Impostazioni e si legge aprendo
-  // «Salute ed esami del sangue» (_setEsamiStorico), una richiesta in meno a ogni apertura di Home e Body.
+  // «Analisi» del Body (Body 160, prima nelle Impostazioni), una richiesta in meno a ogni apertura di Home e Body.
   const [logsRes, measRes, checksRes, pesateOk] = await Promise.all([
     dbq('leggere le misure del corpo', supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90), { silenzioso:true }),
     dbq('leggere le misure dei check', supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90), { silenzioso:true }),
@@ -2050,6 +1985,7 @@ function renderBody(){
     { id:'tendenza', label:'Tendenza' },
     { id:'check',    label:'Check' },
     { id:'energia',  label:'Energia' },
+    { id:'analisi',  label:'Analisi' },   // Body 160: le analisi del sangue (app/analisi.js)
   ];
   // La veste nuova, Giro 1 del Body (schizzo approvato da Ignazio il 29/10/2026): con html.v5 le schede stanno nella testata della zona
   // (_testaBodyV5) e le sezioni hanno i titoli fuori dai riquadri; a veste spenta l'HTML è quello di prima.
@@ -2365,6 +2301,8 @@ function renderBody(){
     body = renderBodyTrend();
   } else if(tab === 'energia'){
     body = renderBodyEnergia();
+  } else if(tab === 'analisi'){
+    body = renderBodyAnalisi();
   }
 
   document.getElementById('page-body').innerHTML = navHTML + (v5 ? _bodyCheckRigaV5() : _bodyCheckCtaHTML()) + avvisoLettura + body + versionFooter();

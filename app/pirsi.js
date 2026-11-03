@@ -228,6 +228,8 @@ function coachRitratto(){
       current: quadri[cur] || null, previous: quadri[wpAddDays(cur, -7)] || null,
       session, cycle, injury, softReturn,
       proposals: ST.coachProposals || [],
+      // Body 160: le analisi più recenti (la riga più nuova di blood_tests, se già lette)
+      blood: Array.isArray(ST.bloodTests) && ST.bloodTests.length ? ST.bloodTests.slice().sort((a, b) => (a.test_date < b.test_date ? 1 : -1))[0] : null,
     });
   } catch(e){
     console.warn('[ritratto]', (e && e.message) || e);
@@ -604,7 +606,8 @@ async function acceptCoachProposal(id){
       if(!(await _cpMark(p, 'accepted', false))) return;
       if(p.kind === 'weigh_in') vai = () => openWeighInSheet();
       else if(p.kind === 'logging' || p.kind === 'eat_first') vai = () => showPage('oggi');
-      else if(p.kind === 'check' || p.kind === 'blood_test') vai = () => { ST.bodyTab = 'check'; showPage('body'); };
+      else if(p.kind === 'check') vai = () => { ST.bodyTab = 'check'; showPage('body'); };
+      else if(p.kind === 'blood_test') vai = () => { ST.bodyTab = 'analisi'; showPage('body'); };   // Body 160
       else showToast('Bene, questa settimana non cambio nulla', '✅', 4000);
     }
   } catch(e){

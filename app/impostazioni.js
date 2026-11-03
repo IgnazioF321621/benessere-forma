@@ -11,22 +11,8 @@
 // SETTINGS MODAL
 // ═══════════════════════════════════════════════════════════
 let SET_INTOL = [];
-const ESAMI_DEFAULTS = [
-  {key:'ferritina', label:'Ferritina (μg/L)', ref:'12–150 F / 12–300 M'},
-  {key:'vitamina_d', label:'Vitamina D (ng/mL)', ref:'30–100'},
-  {key:'vitamina_b12', label:'Vitamina B12 (pg/mL)', ref:'200–900'},
-  {key:'colesterolo_tot', label:'Colesterolo totale (mg/dL)', ref:'< 200'},
-  {key:'hdl', label:'HDL (mg/dL)', ref:'> 40 M / > 50 F'},
-  {key:'ldl', label:'LDL (mg/dL)', ref:'< 130'},
-  {key:'trigliceridi', label:'Trigliceridi (mg/dL)', ref:'< 150'},
-  {key:'glicemia', label:'Glicemia a digiuno (mg/dL)', ref:'70–100'},
-  {key:'insulina', label:'Insulina a digiuno (μU/mL)', ref:'< 25'},
-  {key:'tsh', label:'TSH (mUI/L)', ref:'0.4–4.0'},
-  {key:'hs_crp', label:'PCR alta sensibilità (mg/L)', ref:'< 1'},
-  {key:'omocisteina', label:'Omocisteina (μmol/L)', ref:'< 15'},
-  {key:'zinco', label:'Zinco (μg/dL)', ref:'70–120'},
-  {key:'magnesio', label:'Magnesio (mg/dL)', ref:'1.7–2.2'},
-];
+// I valori degli esami non si scrivono più qui (Body 160, 2 novembre 2026): stanno nella scheda «Analisi» del Body
+// (app/analisi.js, blood_tests). profiles.esami_sangue resta com'è, non si scrive e non si legge più.
 
 function selectSetObiettivo(val) {
   document.getElementById('set-obiettivo').value = val;
@@ -60,7 +46,6 @@ function setVai(pagina) {
   const piede = document.getElementById('set-piede'); if(piede) piede.hidden = !(conf && conf.salva);
   const err = document.getElementById('set-err'); if(err) err.style.display = 'none';
   if(nome === 'elenco') _setRiassunti();
-  if(nome === 'salute') _setEsamiStorico();
   const inner = document.querySelector('#settings-modal .set-foglio'); if(inner) inner.scrollTop = 0;
 }
 // La veste nuova (Giro 1) è accesa per tutti dal 29 ottobre 2026: la classe html.v5 la mette lo script in testa alla pagina,
@@ -83,23 +68,18 @@ function _setRiassunti() {
   const tabata = (typeof tabataModo === 'function') ? tabataModo() : 'spento';
   const tabataTesto = { spento:'Tabata spento', coda:'Tabata in fondo', giorni:'Tabata in certi giorni', a_parte:'Tabata a parte' }[tabata];
   metti('set-sotto-allenamento', `${p.giorni_allenamento || 4} giorni a settimana · ${p.unit || 'lbs'} · ${tabataTesto}${calendarioPronto() ? ` · sedute alle ${p.train_orario}` : ''}`);
-  const esami = Object.keys(p.esami_sangue || {}).filter(k => !/_label$|_data$/.test(k)).length;
-  metti('set-sotto-salute', esami ? `${esami} valor${esami === 1 ? 'e' : 'i'} degli esami` : (p.note_salute ? 'Note sulla salute' : 'Note ed esami'));
+  const analisi = Array.isArray(ST.bloodTests) ? ST.bloodTests.length : 0;
+  metti('set-sotto-salute', analisi ? `${analisi} analisi in Body${p.note_salute ? ' · note' : ''}` : (p.note_salute ? 'Note sulla salute · analisi in Body' : 'Note e analisi del sangue'));
   metti('set-sotto-profilo', [p.first_name, p.last_name].filter(Boolean).join(' ') || ((ST.user && ST.user.email) || ''));
   metti('set-sotto-dati', 'Scarica, dove vanno, elimina account');
   if(typeof _aggiornaPausaImpostazioni === 'function') _aggiornaPausaImpostazioni();   // la pausa (Metodo 210)
   if(typeof _aggiornaCsaImpostazioni === 'function') _aggiornaCsaImpostazioni();       // «Come stai adesso?» (Home 170)
 }
-// Lo storico degli esami del sangue (blood_tests), spostato qui dal tab Body (Metodo 220): stessa card, stessa fonte.
-// «Ultimi log» stava qui dal Body 170 (14 ottobre 2026); dal 1 novembre 2026 (Stile 040) è tornato in Body › Misure.
-// Si legge solo qui, la prima volta che la pagina si apre (e di nuovo dopo un check con gli esami).
-function _setEsamiStorico() {
-  const el = document.getElementById('set-esami-storico');
-  if(el && typeof _bloodHistoryHTML === 'function') el.innerHTML = _bloodHistoryHTML();
-  if(ST.bloodTests == null && !ST.bloodInLettura && typeof loadBloodTests === 'function') {
-    ST.bloodInLettura = true;
-    loadBloodTests().finally(() => { ST.bloodInLettura = false; if(ST.setPagina === 'salute') _setEsamiStorico(); });
-  }
+// Le analisi del sangue stanno nella scheda «Analisi» del Body (Body 160): la pagina Salute ci rimanda
+function vaiAlleAnalisi() {
+  closeSettingsModal();
+  ST.bodyTab = 'analisi';
+  showPage('body');
 }
 
 function openSettingsModal() {
@@ -154,7 +134,6 @@ function _setPopola() {
     document.getElementById('set-intol-'+k)?.classList.toggle('active', SET_INTOL.includes(k));
   });
   // Esami del sangue
-  renderEsamiList(p.esami_sangue || {});
   document.getElementById('set-err').style.display = 'none';
   const btn = document.getElementById('set-save-btn');
   btn.disabled = false; btn.textContent = 'Salva';
@@ -401,39 +380,6 @@ function toggleSetIntol(val) {
   document.getElementById('set-intol-'+val)?.classList.toggle('active', SET_INTOL.includes(val));
 }
 
-function renderEsamiList(existing = {}) {
-  const container = document.getElementById('set-esami-list');
-  // Mostra quelli di default + eventuali custom
-  const allKeys = [...new Set([...ESAMI_DEFAULTS.map(e=>e.key), ...Object.keys(existing)])];
-  container.innerHTML = ESAMI_DEFAULTS.map(e => {
-    const val = existing[e.key] || '';
-    const data = existing[e.key+'_data'] || '';
-    return `<div style="display:grid;grid-template-columns:1fr 90px 100px;gap:6px;align-items:center;margin-bottom:8px;">
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--t1);">${esc(e.label)}</div>
-        <div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">Rif: ${esc(e.ref)}</div>
-      </div>
-      <input class="inp inp-sm" id="esame-${e.key}" type="number" step="0.1" value="${val}" placeholder="valore"/>
-      <input class="inp inp-sm" id="esame-${e.key}-data" type="date" value="${data}" title="Data esame"/>
-    </div>`;
-  }).join('');
-}
-
-async function addEsameRow() {
-  const nome = await chiediTesto('Nome del parametro', { segnaposto:'es. Zinco, PCR…', ok:'Aggiungi' });
-  if(!nome || !nome.trim()) return;
-  const key = nome.trim().toLowerCase().replace(/\s+/g,'_');
-  const container = document.getElementById('set-esami-list');
-  const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 90px 100px;gap:6px;align-items:center;margin-bottom:8px;';
-  div.innerHTML = `<div style="font-size:12px;font-weight:600;color:var(--t1);">${esc(nome.trim())}</div>
-    <input class="inp inp-sm" id="esame-${key}" type="number" step="0.1" placeholder="valore"/>
-    <input class="inp inp-sm" id="esame-${key}-data" type="date" title="Data esame"/>`;
-  div.dataset.key = key;
-  div.dataset.label = nome.trim();
-  container.appendChild(div);
-}
-
 // Fix A2 (24 mag 2026) — cambio obiettivo unificato in Impostazioni.
 // Wrapper di saveSettings: se l'utente sta CAMBIANDO un obiettivo già esistente
 // (X → Y, entrambi non vuoti, diversi), mostra una conferma "sei sicuro?"
@@ -521,23 +467,6 @@ async function _saveSettingsExecute(goalChanged) {
   // in chiaro) o con un «Accetto» a Pirsi. Il peso si salva solo da «Pesati ora».
   const targets = { kcal: ST.TARGET.kcal, protein: ST.TARGET.protein, carbs: ST.TARGET.carbs, fat: ST.TARGET.fat };
 
-  // Raccoglie esami del sangue
-  const esami = {};
-  ESAMI_DEFAULTS.forEach(e => {
-    const v = document.getElementById('esame-'+e.key)?.value;
-    const d = document.getElementById('esame-'+e.key+'-data')?.value;
-    if(v) { esami[e.key] = parseFloat(v); esami[e.key+'_label'] = e.label; }
-    if(d) esami[e.key+'_data'] = d;
-  });
-  // Esami custom
-  document.querySelectorAll('#set-esami-list [data-key]').forEach(row => {
-    const key = row.dataset.key;
-    const v = document.getElementById('esame-'+key)?.value;
-    const d = document.getElementById('esame-'+key+'-data')?.value;
-    if(v) { esami[key] = parseFloat(v); esami[key+'_label'] = row.dataset.label; }
-    if(d) esami[key+'_data'] = d;
-  });
-
   const updates = {
     first_name:    fname,
     last_name:     document.getElementById('set-lname').value.trim(),
@@ -547,7 +476,6 @@ async function _saveSettingsExecute(goalChanged) {
     dieta:         document.getElementById('set-dieta').value,
     intolleranze:  SET_INTOL.length ? SET_INTOL : null,
     note_salute:   document.getElementById('set-note-salute').value.trim() || null,
-    esami_sangue:  Object.keys(esami).length ? esami : null,
     target_kcal:   targets.kcal,
     target_protein: targets.protein,
     target_carbs:  targets.carbs,

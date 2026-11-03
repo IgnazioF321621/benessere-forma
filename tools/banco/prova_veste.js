@@ -468,7 +468,8 @@ header`);
   for(const v5 of [false, true]){
     const b = await apri({ locale:{ zt_v5: v5 ? '1' : '0' }, now:OGGI + 'T09:30:00' });   // alle 9:30 «Come stai adesso?» non si apre
     const W = b.win, ST = W.eval('ST');
-    for(const tab of (v5 ? ['misure', 'tendenza', 'check', 'energia'] : ['misure'])){
+    if(v5){ const ST0 = W.eval('ST'); ST0.bloodTests = [{ id: 'b1', user_id: U, test_date: '2026-09-20', donazione: true, esami: [{ nome: 'Ferritina', chiave: 'ferritina', valore: 28, unita: 'ng/mL', rif_min: 30, rif_max: 400 }, { nome: 'Emoglobina', chiave: 'emoglobina', valore: 15.1, unita: 'g/dL' }] }, { id: 'b2', user_id: U, test_date: '2026-05-10', ferritin: 80, hemoglobin: 14.8 }]; ST0.analisiAperta = 'b1'; W.callAI = async () => 'Ferritina scesa: parlane col medico.'; }   // Body 160: due analisi per la scheda
+    for(const tab of (v5 ? ['misure', 'tendenza', 'check', 'energia', 'analisi'] : ['misure'])){
       ST.bodyTab = tab; W.showPage('body'); await attendi(300);
       pagB[(v5 ? 'body_' : 'body_spenta_') + tab] = fotografa(W);
     }
@@ -485,9 +486,10 @@ nNuovoCheck:[...document.querySelectorAll('#page-body button')].filter(b=>/Nuovo
 riga:(e=>e?{t:e.textContent.replace(/\\s+/g,' ').trim(),h:Math.round(e.getBoundingClientRect().height)}:null)(document.querySelector('#page-body .b5-check-riga')),
 pesoCampo:(e=>e?e.type:null)(document.getElementById('bl-weight')),
 pesati:(e=>e?{h:Math.round(e.getBoundingClientRect().height),fondo:getComputedStyle(e).backgroundColor}:null)(document.querySelector('#page-body .b5-pesati')),
-testiB:testi('.b5-testa,#page-body .sez5,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-vuoto,#page-body .b5-peso,#page-body .b5-misure,#page-body .trend-card').filter(x=>x.c<4.5),
-tastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-pesati,#page-body .b5-salva,#page-body .b5-misure button').filter(x=>x.h<44),
-nTastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-pesati,#page-body .b5-salva,#page-body .b5-misure button').length,
+testiB:testi('.b5-testa,#page-body .sez5,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-vuoto,#page-body .b5-peso,#page-body .b5-misure,#page-body .trend-card,#page-body .an-elenco,#page-body .an-card,#page-body .an-azioni').filter(x=>x.c<4.5),
+tastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-pesati,#page-body .b5-salva,#page-body .b5-misure button,#page-body .an-elenco button,#page-body .an-azioni button').filter(x=>x.h<44),
+nTastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-pesati,#page-body .b5-salva,#page-body .b5-misure button,#page-body .an-elenco button,#page-body .an-azioni button').length,
+analisi:(()=>{const e=document.querySelector('#page-body .an-elenco');return e?{righe:document.querySelectorAll('#page-body .an-riga').length,aperta:!!document.querySelector('#page-body .an-dettaglio'),card:document.querySelectorAll('#page-body .an-card').length,don:(x=>x?x.textContent.trim():null)(document.querySelector('#page-body .an-donazioni'))}:null;})(),
 header`);
   for(const [n, h] of Object.entries(pagB)){
     fs.writeFileSync(path.join(radiceB, n + '.html'), h.replace('</body>', MISURA_B + '</body>'));
@@ -496,12 +498,13 @@ header`);
   const misuraB = async (n) => { const m = (await chromeT(['--window-size=390,1600', '--dump-dom', 'file://' + path.join(radiceB, n + '.html')])).match(/data-misura="([^"]*)"/);
     return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
   try {
-    const bs = await misuraB('body_spenta_misure'), bm = await misuraB('body_misure'), bt = await misuraB('body_tendenza'), bc = await misuraB('body_check'), be = await misuraB('body_energia'), tb = await misuraB('training_dopo_body');
-    atteso('Body: Chrome ha risposto per le sei pagine', [bs, bm, bt, bc, be, tb].map(x => !!x), [true, true, true, true, true, true]);
-    if(bs && bm && bt && bc && be && tb){
+    const bs = await misuraB('body_spenta_misure'), bm = await misuraB('body_misure'), bt = await misuraB('body_tendenza'), bc = await misuraB('body_check'), be = await misuraB('body_energia'), ba = await misuraB('body_analisi'), tb = await misuraB('training_dopo_body');
+    atteso('Body: Chrome ha risposto per le sette pagine', [bs, bm, bt, bc, be, ba, tb].map(x => !!x), [true, true, true, true, true, true, true]);
+    if(bs && bm && bt && bc && be && ba && tb){
       atteso('Body spento: le linguette di prima, niente testata né titoli nuovi; il campo «Peso (kg)», il tasto «Nuovo check fisico» di prima, niente riga né «Pesati ora»', [bs.vecchieLinguette, bs.bTesta, bs.sezioniB, bs.header !== 'none', bs.pesoCampo, bs.nNuovoCheck, bs.riga, bs.pesati], [true, null, [], true, 'number', 1, null, null]);
-      for(const [nome, m] of [['Misure', bm], ['Tendenza', bt], ['Check', bc], ['Energia', be]]){
-        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, quattro schede dentro, senza fuoco, peso, ⚙ ed Esci`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length, m.chipTesta], ['rgb(106, 85, 160)', 'none', false, 4, 0]);
+      atteso('Body Analisi (Body 160): due righe per data, la prima aperta, una donazione, due card dell\'andamento', ba.analisi, { righe: 2, aperta: true, card: 2, don: '1 donazione' });
+      for(const [nome, m] of [['Misure', bm], ['Tendenza', bt], ['Check', bc], ['Energia', be], ['Analisi', ba]]){
+        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, cinque schede dentro (Analisi dal Body 160), senza fuoco, peso, ⚙ ed Esci`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length, m.chipTesta], ['rgb(106, 85, 160)', 'none', false, 5, 0]);
         atteso(`Body ${nome}, giro 2: il check è una riga sottile (primo check da fare), alta almeno 44 px, e il tasto largo non sta più in cima`, [m.riga && m.riga.t, m.riga && m.riga.h >= 44, nome === 'Check' ? m.nNuovoCheck : m.cta], ['Primo check fisico da fare›', true, nome === 'Check' ? 1 : null]);
         atteso(`Body ${nome}: ogni testo della testata e dei gruppi almeno 4,5:1`, m.testiB, []);
         atteso(`Body ${nome}: ogni tasto alto almeno 44 px (${m.nTastiB} tasti)`, m.tastiB, []);

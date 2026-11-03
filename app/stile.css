@@ -3064,3 +3064,70 @@ html.v5 .w5-freccia{font-size:20px;color:var(--t2);}
 .pw-codice p{font-family:var(--font-sans);font-size:14px;color:var(--t2);line-height:1.5;margin:6px 0 12px;}
 .pw-etichetta{font-family:var(--font-sans);font-size:13px;color:var(--t2);margin-top:4px;}
 .pw-msg{font-family:var(--font-sans);font-size:13px;color:var(--err);min-height:18px;line-height:1.4;}
+
+/* ── Body › Analisi (Body 160, 2 novembre 2026): lo storico delle analisi del sangue ── */
+.an-dettaglio{padding:4px 14px 12px;border-bottom:1px solid var(--s3);}
+.an-valore{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--s2);}
+.an-valore:last-of-type{border-bottom:0;}
+.an-nome{display:flex;flex-direction:column;min-width:0;font-family:var(--font-sans);font-size:13px;color:var(--t2);}
+.an-nome small{font-family:var(--font-mono);font-size:10px;color:var(--t3);}
+.an-numero{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;}
+.an-numero small{font-weight:400;color:var(--t3);}
+.an-numero .an-delta{margin-left:6px;font-size:10px;}
+.an-segno{margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:var(--z-nutrition-velo);color:var(--z-nutrition-scuro);}
+.an-fuori .an-numero{color:var(--z-nutrition-scuro);}   /* ambra scura, 8:1 su bianco: il segno «fuori fascia» si legge */
+.an-medico{margin-top:10px;font-family:var(--font-sans);font-size:11px;color:var(--t3);}
+.an-tasti{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.an-tasto{min-height:44px;padding:0 14px;border:1px solid var(--b1);border-radius:999px;background:var(--s1);font-family:var(--font-sans);font-size:13px;font-weight:700;color:var(--t1);cursor:pointer;}
+.an-pirsi-tasto{margin-top:4px;}
+.an-elimina{color:var(--t2);}
+.an-pirsi{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--s2);}
+.an-pirsi-chi{flex-shrink:0;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);padding-top:2px;}
+.an-pirsi-testo{font-family:var(--font-sans);font-size:13px;line-height:1.45;color:var(--t1);}
+.an-card{padding:12px 14px 10px;}
+.an-card-testa{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.an-card-nome{font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);}
+.an-card-ultimo{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;}
+.an-card-ultimo small{margin-left:6px;font-weight:400;color:var(--t3);}
+.an-card-ultimo.an-fuori{color:var(--z-nutrition-scuro);}
+.an-card-fascia{font-family:var(--font-mono);font-size:10px;color:var(--t3);margin-top:4px;}
+.an-grafico{margin-top:6px;}
+.an-fascia{fill:rgba(var(--acc-rgb),.10);}
+.an-linea{fill:none;stroke:var(--acc);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.an-punto{fill:var(--acc);}
+.an-punto-fuori{fill:var(--z-nutrition-scuro);}
+.an-foglio-nota{font-family:var(--font-sans);font-size:13px;color:var(--t2);line-height:1.45;margin:0 0 10px;}
+.an-foglio-lbl{display:block;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:8px 0 4px;}
+.an-foglio-righe{margin-top:10px;}
+.an-foglio-riga{display:grid;grid-template-columns:1fr 72px 64px 28px;gap:6px;align-items:center;margin-bottom:6px;}
+.an-f-togli{border:0;background:none;font-size:18px;line-height:1;color:var(--t3);cursor:pointer;padding:4px;}
+.an-f-aggiungi{margin:4px 0 10px;}
+.an-f-donazione{display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border:0;border-top:1px solid var(--s2);background:none;text-align:left;cursor:pointer;}
+.an-f-don-nome{display:block;font-family:var(--font-sans);font-size:15px;font-weight:700;color:var(--t1);}
+.an-f-don-sotto{display:block;font-family:var(--font-sans);font-size:11px;color:var(--t3);line-height:1.35;margin-top:2px;}
+.an-f-leva{position:relative;flex-shrink:0;width:50px;height:30px;border-radius:999px;background:var(--s3);transition:background .15s;}
+.an-f-leva i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--bianco);box-shadow:0 1px 3px rgba(var(--nero-rgb),.25);transition:left .15s;}
+.an-f-donazione[aria-checked="true"] .an-f-leva{background:var(--acc);}
+.an-f-donazione[aria-checked="true"] .an-f-leva i{left:23px;}
+.an-foglio-err{margin-top:8px;font-family:var(--font-sans);font-size:12px;color:var(--err);}
+/* a veste spenta la scheda ha i riquadri di prima */
+html:not(.v5) #page-body .b5-gruppo.an-azioni,html:not(.v5) #page-body .b5-gruppo.an-elenco,html:not(.v5) #page-body .an-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);margin-top:12px;box-shadow:var(--shadow);}
+html:not(.v5) #page-body .an-azioni .b5-check-riga,html:not(.v5) #page-body .an-riga{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:48px;padding:8px 14px;border:0;border-bottom:1px solid var(--s2);background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--t1);}
+html:not(.v5) #page-body .an-riga .b5-log-data{flex:1;}
+html:not(.v5) #page-body .an-riga .b5-log-data small{margin-left:6px;font-family:var(--font-mono);font-size:11px;color:var(--acc);}
+html:not(.v5) #page-body .an-riga .b5-log-valori{font-family:var(--font-mono);font-size:12px;color:var(--t2);}
+html:not(.v5) #page-body .an-vuoto{margin-top:12px;padding:24px 16px;text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);}
+html:not(.v5) #page-body .an-vuoto h3{margin:8px 0;font-family:var(--font-sans);font-size:16px;color:var(--t1);}
+html:not(.v5) #page-body .an-titolo,html:not(.v5) #page-body .sez5{display:flex;justify-content:space-between;margin:14px 2px 2px;font-family:var(--font-sans);font-size:13px;font-weight:700;color:var(--t1);}
+html:not(.v5) #page-body .sez5-dx{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--t3);}
+/* veste v5: i gruppi bianchi e le righe da 52 px sono di .b5-gruppo e .b5-log-riga; qui solo il colore di zona */
+html.v5 #page-body .an-donazioni{color:var(--z-body-scuro);}
+html.v5 #page-body .an-pirsi-chi{color:var(--z-body-scuro);}
+html.v5 #page-body .an-fascia{fill:var(--z-body-velo);}
+html.v5 #page-body .an-linea{stroke:var(--z-body);}
+html.v5 #page-body .an-punto{fill:var(--z-body);}
+html.v5 #page-body .an-card{margin-top:12px;}
+html.v5 #page-body .an-dettaglio{border-bottom:1px solid var(--s3);}
+html.v5 #page-body .an-tasto{color:var(--z-body-scuro);border-color:var(--z-body-velo);background:var(--z-body-velo);}
+html.v5 #page-body .an-elimina{color:var(--t2);background:var(--s2);border-color:var(--s2);}
+html.v5 #page-body :is(.an-nome small,.an-numero small,.an-medico,.an-card-fascia,.an-card-ultimo small){color:var(--t2);}

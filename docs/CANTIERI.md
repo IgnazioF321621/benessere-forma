@@ -173,7 +173,7 @@ Il 12 settembre il ponte è stato ricostruito **a valle**, leggendo gli alias da
 ⚠️ Il punto 3 è quello che va guardato: le righe che il ponte **non** risolve vanno elencate, non lasciate a `NULL` in silenzio → [L10](LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto).
 
 ## 32. Intervalli di riferimento degli esami del sangue
-*Aperto il 12 settembre 2026, insieme allo storico esami.*
+*Aperto il 12 settembre 2026, insieme allo storico esami. **Chiuso il 2 novembre 2026 con Body 160**: la fascia viene dal referto se è stampata (`rif_min`/`rif_max` in `blood_tests.esami`), altrimenti dalla tabella di `shared/esami.js` con il sesso dove serve e la fonte scritta accanto (ESC/EAS, ADA, Endocrine Society, AHA/CDC, valori comuni dei laboratori); l'app segna basso/alto e dice sempre «Valori da rivedere con il tuo medico», Pirsi descrive e non fa diagnosi → [Le analisi del sangue](COACH.md#le-analisi-del-sangue). Quello che segue è il ragionamento di allora.*
 
 `blood_tests` contiene **solo i valori**, nessun intervallo di riferimento. Lo storico quindi mostra i numeri e una riga sola, sempre uguale — «Valori da rivedere con il tuo medico» — senza pallini, senza colori e senza giudizi: **inventare un intervallo era l'unica cosa da non fare**, perché un valore marcato fuori norma da un'app che non sa quale laboratorio lo ha prodotto è peggio di nessuna indicazione.
 

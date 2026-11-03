@@ -72,14 +72,15 @@ const ESAMI = [{ id:'b1', user_id:U, test_date:'2026-09-01', ferritin:80, vitami
   W.setVai('crediti');
   atteso('Crediti non esiste più (giro 2, 30 ottobre 2026): si torna all\'elenco', [visibili(), !!d.querySelector('.set-voce[data-voce="crediti"]')], [['elenco'], false]);
 
-  // 6) Salute: lo storico degli esami, letto solo qui e una volta
+  // 6) Salute (Body 160, 2 novembre 2026): lo storico non sta più qui; nessuna lettura degli esami, un rimando alla scheda Analisi
   const s1 = sangue();
   W.setVai('salute'); await attendi(30);
-  atteso('Salute: storico letto qui, una lettura', [sangue() - s1, /Esami del sangue/.test(testo(d.getElementById('set-esami-storico')))], [1, true]);
-  W.toggleBloodTest('b1'); await attendi(10);
-  atteso('il dettaglio di un esame si apre nella pagina', /Ferritina/.test(testo(d.getElementById('set-esami-storico'))), true);
-  W.setIndietro(); W.setVai('salute'); await attendi(20);
-  atteso('riaperta: nessuna lettura in più', sangue() - s1, 1);
+  const salute = d.querySelector('#settings-modal .set-pagina[data-pagina="salute"]');
+  atteso('Salute: nessuna lettura degli esami, niente lista di valori, il rimando alla scheda Analisi', [sangue() - s1, !!salute.querySelector('#set-esami-list'), /Apri le analisi in Body/.test(testo(salute))], [0, false, true]);
+  W.vaiAlleAnalisi(); await attendi(20);
+  atteso('«Apri le analisi»: Impostazioni chiuse, Body sulla scheda Analisi', [d.getElementById('settings-modal').style.display, ST.page, ST.bodyTab], ['none', 'body', 'analisi']);
+  W.openSettingsModal(); W.setVai('salute'); await attendi(20);
+  atteso('riaperta: la sola lettura è quella della scheda Analisi, Salute non ne fa', sangue() - s1, 1);
 
   // 7) Pausa e Come stai adesso aprono i loro fogli dall'elenco
   let pausa = 0, orari = 0; W.apriPausa = () => { pausa++; }; W.apriOrariComeStaiAdesso = () => { orari++; };
