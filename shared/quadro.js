@@ -142,41 +142,140 @@ var ZTQuadro = (function(){
     PAUSA_MODULI.forEach(function(m){ out[m] = tutti || lista.indexOf(m) !== -1; });
     return out;
   }
+  // ── Più pause (Training 360, 3 novembre 2026) ──
+  // Il caso vero: una malattia aperta (fine da decidere) e un viaggio già programmato. I periodi stanno in
+  // profiles.pause (jsonb, migrazione 20261103_360): un array di { id, inizio, fine | null, motivo, moduli }, al
+  // massimo uno aperto. Finché la colonna non c'è, o è nulla, vale la pausa sola di prima (pausa_inizio, pausa_fine,
+  // pausa_motivo, pausa_moduli). pause = [] vuol dire nessuna pausa: non si torna ai campi vecchi.
+  //   pausaPeriodi(profile) → [{ id, inizio, fine, motivo, moduli: {allenamento, cibo, pesate} }] in ordine di inizio
+  var DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function moduliDi(lista){
+    var l = Array.isArray(lista) ? lista.map(function(m){ return String(m || '').trim().toLowerCase(); }) : null;
+    var tutti = !l || !l.length, out = {};
+    PAUSA_MODULI.forEach(function(m){ out[m] = tutti || l.indexOf(m) !== -1; });
+    return out;
+  }
+  function pausaPeriodi(profile){
+    var p = profile || {};
+    var grezzi = Array.isArray(p.pause) ? p.pause
+      : (p.pausa_inizio ? [{ id: 'pausa', inizio: p.pausa_inizio, fine: p.pausa_fine || null, motivo: p.pausa_motivo || null, moduli: p.pausa_moduli }] : []);
+    var out = [];
+    grezzi.forEach(function(g, i){
+      if(!g || !DATA_RE.test(String(g.inizio || ''))) return;
+      var fine = DATA_RE.test(String(g.fine || '')) ? g.fine : null;
+      if(fine && fine < g.inizio) fine = g.inizio;   // un periodo non è mai invertito: chiuso lo stesso giorno, dura un giorno
+      out.push({ id: g.id || ('p' + i), inizio: g.inizio, fine: fine, motivo: g.motivo || null, moduli: moduliDi(g.moduli) });
+    });
+    return out.sort(function(a, b){ return a.inizio < b.inizio ? -1 : a.inizio > b.inizio ? 1 : 0; });
+  }
+  function infoPeriodo(z, today){
+    var attiva = z.inizio <= today && (!z.fine || today <= z.fine);
+    var futura = z.inizio > today, finita = !!z.fine && z.fine < today;
+    var giorniTotali = z.fine ? giorniTra(z.inizio, z.fine) + 1 : null;
+    return { id: z.id, inizio: z.inizio, fine: z.fine, motivo: z.motivo, moduli: z.moduli,
+      attiva: attiva, futura: futura, finita: finita, giorniTotali: giorniTotali,
+      giorniFatti: attiva ? giorniTra(z.inizio, today) + 1 : (finita ? giorniTotali : 0),
+      giorniDalRientro: finita ? giorniTra(z.fine, today) : null };
+  }
+  // La pausa da mostrare: quella in corso (se più d'una, l'aperta o quella che finisce più tardi), altrimenti la
+  // prossima, altrimenti l'ultima finita. Con `periodi`: tutte, ognuna con gli stessi campi.
+  //   → null se non ce n'è nessuna, altrimenti { inizio, fine, motivo, moduli, attiva, futura, finita, giorniTotali,
+  //     giorniFatti, giorniDalRientro, id, periodi }
   function pausaInfo(profile, today){
-    var p = profile || {};
-    var inizio = p.pausa_inizio || null, fine = p.pausa_fine || null;
-    if(!inizio || !today) return null;
-    if(fine && fine < inizio) fine = inizio;
-    var attiva = inizio <= today && (!fine || today <= fine);
-    var futura = inizio > today;
-    var finita = !!fine && fine < today;
-    var giorniTotali = fine ? giorniTra(inizio, fine) + 1 : null;
-    return {
-      inizio: inizio, fine: fine, motivo: p.pausa_motivo || null, moduli: pausaModuli(p),
-      attiva: attiva, futura: futura, finita: finita,
-      giorniTotali: giorniTotali,
-      giorniFatti: attiva ? giorniTra(inizio, today) + 1 : (finita ? giorniTotali : 0),
-      giorniDalRientro: finita ? giorniTra(fine, today) : null,
-    };
+    if(!today) return null;
+    var periodi = pausaPeriodi(profile).map(function(z){ return infoPeriodo(z, today); });
+    if(!periodi.length) return null;
+    var attive = periodi.filter(function(z){ return z.attiva; }), scelta = null;
+    if(attive.length) scelta = attive.slice().sort(function(a, b){ return (a.fine === null ? 1 : 0) - (b.fine === null ? 1 : 0) || (a.fine < b.fine ? -1 : a.fine > b.fine ? 1 : 0); }).pop();
+    else scelta = periodi.filter(function(z){ return z.futura; })[0] || periodi.filter(function(z){ return z.finita; }).pop();
+    var out = {};
+    Object.keys(scelta).forEach(function(k){ out[k] = scelta[k]; });
+    out.periodi = periodi;
+    // finoAl: dove finisce la catena di periodi che si toccano a partire da questo (malattia fino al 7, viaggio dall'8
+    // al 15 → 15); null se uno è aperto. È la data da dire («in pausa fino al …»).
+    var fino = scelta.fine, cambiato = true;
+    while(fino && cambiato){
+      cambiato = false;
+      periodi.forEach(function(z){
+        if(fino && z.inizio >= scelta.inizio && z.inizio <= addDays(fino, 1) && (z.fine === null || z.fine > fino)){ fino = z.fine; cambiato = true; }
+      });
+    }
+    out.finoAl = fino;
+    return out;
   }
-  // La pausa vale per `giorno` e per quel modulo? (senza modulo: la pausa in sé)
+  // La pausa vale per `giorno` e per quel modulo? (senza modulo: una pausa qualsiasi)
   function pausaAttivaIl(profile, giorno, modulo){
-    var p = profile || {};
-    if(!p.pausa_inizio || !giorno) return false;
-    if(modulo && !pausaModuli(p)[modulo]) return false;
-    return p.pausa_inizio <= giorno && (!p.pausa_fine || giorno <= p.pausa_fine);
+    if(!giorno) return false;
+    return pausaPeriodi(profile).some(function(z){
+      return (!modulo || z.moduli[modulo]) && z.inizio <= giorno && (!z.fine || giorno <= z.fine);
+    });
   }
-  // Quanti giorni di pausa cadono in [da, a] (estremi compresi); una pausa aperta arriva fino ad `a`.
-  // Con `modulo` ('allenamento' · 'cibo' · 'pesate'): 0 se quel modulo non è in pausa.
+  // Quanti giorni di pausa cadono in [da, a] (estremi compresi); una pausa aperta arriva fino ad `a`. Più periodi che
+  // si toccano o si sovrappongono contano i loro giorni una volta sola. Con `modulo`: solo i periodi che lo fermano.
   function pausaGiorniNel(profile, da, a, modulo){
-    var p = profile || {};
-    if(!p.pausa_inizio || !da || !a || a < da) return 0;
-    if(modulo && !pausaModuli(p)[modulo]) return 0;
-    var inizio = p.pausa_inizio > da ? p.pausa_inizio : da;
-    var fine = (p.pausa_fine && p.pausa_fine < a) ? p.pausa_fine : a;
-    if(fine < inizio) return 0;
-    return giorniTra(inizio, fine) + 1;
+    if(!da || !a || a < da) return 0;
+    var pezzi = pausaPeriodi(profile).filter(function(z){ return !modulo || z.moduli[modulo]; }).map(function(z){
+      return [z.inizio > da ? z.inizio : da, (z.fine && z.fine < a) ? z.fine : a];
+    }).filter(function(x){ return x[0] <= x[1]; }).sort(function(x, y){ return x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0; });
+    var tot = 0, cur = null;
+    pezzi.forEach(function(x){
+      if(cur && x[0] <= addDays(cur[1], 1)){ if(x[1] > cur[1]) cur[1] = x[1]; return; }
+      if(cur) tot += giorniTra(cur[0], cur[1]) + 1;
+      cur = [x[0], x[1]];
+    });
+    if(cur) tot += giorniTra(cur[0], cur[1]) + 1;
+    return tot;
   }
+
+  // ── Il rientro dopo uno stop (Training 360, 3 novembre 2026) ──
+  // Lo stop si misura in giorni senza sedute di lavoro fra l'ultima prima e la prima dopo: due pause vicine senza
+  // allenamenti in mezzo fanno uno stop solo. La letteratura: forza e massa reggono 3-4 settimane (Mujika e Padilla
+  // 2000; McMaster e colleghi 2013), dopo una febbre si riprende per gradi (Eichner 1993), meno volume al 90% del carico
+  // mantiene i guadagni (Bickel e colleghi 2011).
+  //   fino a 7 giorni           come prima
+  //   8-20 giorni, o malattia   la prima settimana (7 giorni dalla prima seduta dopo lo stop) è leggera:
+  //                             serie a ⅔ (minimo 2), carico al 90% dell'ultima serie, RIR +1
+  //   21 giorni o più           blocco nuovo, con la settimana leggera
+  //   malattia a blocco avanzato (dalla settimana 4)   blocco nuovo (scelta di Ignazio, regola per tutti)
+  var RIENTRO = { LEGGERO_DA: 8, BLOCCO_NUOVO_DA: 21, GIORNI_LEGGERI: 7, SERIE: 2 / 3, SERIE_MIN: 2, CARICO: 0.9, RIR_PIU: 1, SETTIMANA_AVANZATA: 4 };
+  function eMalattia(z){ return String((z && z.motivo) || '').split(',').map(function(x){ return x.trim().toLowerCase(); }).indexOf('malattia') !== -1; }
+  // rientro({ completati, profile, oggi, settimanaPrima })
+  //   completati: righe di workouts ({ date, session_type, completed }); contano le sedute di lavoro (né recuperi né riposi)
+  //   settimanaPrima: la settimana del blocco (1-6) nel giorno dell'ultima seduta prima dello stop, o una funzione
+  //                   (giorno) → settimana; serve solo alla malattia a blocco avanzato
+  // → null, oppure { prima, ripresa, attesa (la ripresa è oggi e non c'è ancora la seduta), stopGiorni, malattia,
+  //                   leggera, finoA (ultimo giorno leggero), bloccoNuovo }
+  function rientro(o){
+    o = o || {};
+    var oggi = o.oggi;
+    if(!oggi) return null;
+    var date = (o.completati || []).filter(function(w){
+      return w && w.date && w.date <= oggi && w.completed !== false && !/^recovery/i.test(w.session_type || '') && !/^rest/.test(w.session_type || '');
+    }).map(function(w){ return w.date; }).sort().filter(function(d, i, a){ return a.indexOf(d) === i; });
+    if(!date.length) return null;
+    var punti = date.slice(), attesa = false;
+    if(punti[punti.length - 1] !== oggi){
+      // ancora in pausa per l'allenamento: oggi non è una ripresa; altrimenti oggi è la ripresa che aspetta la seduta
+      if(!pausaAttivaIl(o.profile, oggi, 'allenamento')){ punti.push(oggi); attesa = true; }
+    }
+    var periodi = pausaPeriodi(o.profile).filter(function(z){ return z.moduli.allenamento; });
+    for(var i = punti.length - 1; i >= 1; i--){
+      var ripresa = punti[i];
+      if(giorniTra(ripresa, oggi) >= RIENTRO.GIORNI_LEGGERI) break;
+      var prima = punti[i - 1], stop = giorniTra(prima, ripresa) - 1;
+      if(stop < 1) continue;
+      var da = addDays(prima, 1), a = addDays(ripresa, -1);
+      var malattia = periodi.some(function(z){ return eMalattia(z) && z.inizio <= a && (!z.fine || z.fine >= da); });
+      if(stop < RIENTRO.LEGGERO_DA && !malattia) continue;
+      var sett = typeof o.settimanaPrima === 'function' ? o.settimanaPrima(prima) : o.settimanaPrima;
+      return { prima: prima, ripresa: ripresa, attesa: attesa && i === punti.length - 1, stopGiorni: stop, malattia: malattia,
+        leggera: true, finoA: addDays(ripresa, RIENTRO.GIORNI_LEGGERI - 1),
+        bloccoNuovo: stop >= RIENTRO.BLOCCO_NUOVO_DA || (malattia && Number(sett) >= RIENTRO.SETTIMANA_AVANZATA) };
+    }
+    return null;
+  }
+  // Le serie di lavoro nella settimana leggera: ⅔ arrotondati, minimo 2 (mai più di quelle della scheda)
+  function serieRientro(n){ n = Number(n) || 0; return n <= RIENTRO.SERIE_MIN ? n : Math.max(RIENTRO.SERIE_MIN, Math.round(n * RIENTRO.SERIE)); }
 
   // Le serie previste in una settimana dalla scheda (Training 110): la somma delle serie delle sedute
   // di lavoro (i recuperi non contano). Chi calcola il quadro le passa in ctx.sessioni; senza, null.
@@ -368,6 +467,9 @@ var ZTQuadro = (function(){
         injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
         pause_days:       pausaGg,
         feel:             feel.n ? feel : null,
+        // Training 360: la settimana leggera dopo uno stop. Meno serie e carichi più bassi sono voluti: Pirsi non li
+        // legge come un calo (niente «meno giorni», niente scarico anticipato).
+        rientro:          (function(){ var r = rientro({ completati: raw.workouts, profile: profile, oggi: isClosed ? we : today }); return !!(r && !r.attesa && r.ripresa <= we); })(),
       };
     }
 
@@ -482,7 +584,7 @@ var ZTQuadro = (function(){
     WP_VERSION: WP_VERSION, WP_FASCIA: WP_FASCIA, inFascia: inFascia, giornoScarso: giornoScarso, parolaSettimana: parolaSettimana, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
     workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
-    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, PAUSA_MODULI: PAUSA_MODULI,
+    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, pausaPeriodi: pausaPeriodi, rientro: rientro, serieRientro: serieRientro, RIENTRO: RIENTRO, PAUSA_MODULI: PAUSA_MODULI,
     serieSettimanaliPreviste: serieSettimanaliPreviste,
     fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,
   };
