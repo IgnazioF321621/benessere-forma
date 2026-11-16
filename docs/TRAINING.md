@@ -297,14 +297,16 @@ Il caso vero di Ignazio: allenato il 2 e il 3 novembre, la febbre dal 3, il viag
 
 **Il mesociclo è 5+1: sei settimane, cinque di carico e una di scarico** *(dal 24 agosto 2026, prima era 3+1)*. La tabella, uguale in `CYCLE_WEEKS` e nella card Ciclo del Programma:
 
-| Sett. | Progressione | RIR |
+| Sett. | Progressione | RIR (Forza / Ipertrofia) |
 |---|---|---|
-| 1 | Base | 2 / 1 |
+| 1 | Base | 3 / 2 |
 | 2 | +1 rep | 2 / 1 |
 | 3 | +1 set | 2 / 1 |
 | 4 | +1 rep | 1 / 1 |
 | 5 | Picco | 1 / 1 |
 | 6 | Scarico −40% vol | 3+ |
+
+**Il RIR scende lungo il blocco, e la regola è una sola** *(Training 380, 16 novembre 2026, decisione di Ignazio: «si riparte col massimo di tutto»)*: `ZTQuadro.rirSettimana(settimana, base, {leggera})` in `shared/quadro.js`. Sul RIR di base (quello dell'esercizio, o della seduta, o 2) le settimane 1-5 aggiungono +1 · 0 · 0 · −1 · −1: RIR 3 · 2 · 2 · 1 · 1 sulla base 2, 2 · 1 · 1 · 1 · 1 sulla base 1; la 6 è lo scarico, RIR 3. Mai sotto 1 (mai a cedimento, come dice il modale «RIR»), salvo una base già a 0 (Pump). La settimana leggera del rientro (+1 sulla base, al massimo 4) non si somma: vale la più alta delle due, quindi nella prima settimana di un blocco nuovo al rientro la base 2 resta a 3. Letteratura: la scala RIR di Helms et al. 2016 (Strength Cond J 38:42), il RIR che scende lungo il mesociclo (Zourdos et al. 2016, J Strength Cond Res 30:267; Israetel, Renaissance Periodization), niente cedimento (Refalo et al. 2023, Sports Med 53:649). Nell'app la leggono solo `rirDiOggi(ex, sess)` e `rirSedutaOggi(sess)` (PROSSIMA, obiettivo della prima serie, pillola della card, testate della seduta, «Oggi» del Programma, la tabella qui sopra in `CYCLE_WEEKS`); le tenute restano senza RIR. Pirsi anticipa lo scarico solo sotto RIR 0,5 per due settimane: la rampa non ci arriva, e il RIR 3 della settimana 1 non è un calo. L'anteprima del blocco nuovo dice la rampa in una riga, il RIR della prima settimana per seduta e, se oggi c'è la settimana leggera del rientro, «Prima settimana leggera fino al …» con le serie a ⅔. Il banco tiene le prove scritte prima sul RIR di base (`opts.rampaRir` per provare la rampa). Lo prova `node tools/banco/prova_training_380.js`
 
 ⚠️ **La S3 prima dichiarava `RIR 1 / 0`, e RIR 0 è il cedimento**: contraddiceva il modale info, che promette margine in ogni settimana di carico. Ora è `2 / 1`.
 

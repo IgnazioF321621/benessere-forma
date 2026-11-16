@@ -280,6 +280,29 @@ var ZTQuadro = (function(){
   // Le serie di lavoro nella settimana leggera: ⅔ arrotondati, minimo 2 (mai più di quelle della scheda)
   function serieRientro(n){ n = Number(n) || 0; return n <= RIENTRO.SERIE_MIN ? n : Math.max(RIENTRO.SERIE_MIN, Math.round(n * RIENTRO.SERIE)); }
 
+  // ── Il RIR della settimana del blocco (Training 380, 16 novembre 2026, decisione di Ignazio: «si riparte col massimo
+  // di tutto») ──
+  // Ogni blocco parte morbido e sale settimana per settimana: sul RIR di base dell'esercizio o della seduta (2 se non c'è)
+  // le settimane 1-5 aggiungono +1 · 0 · 0 · −1 · −1, cioè RIR 3 · 2 · 2 · 1 · 1 sulla base 2; la 6 è lo scarico, RIR 3.
+  // È la scala RIR di Helms et al. 2016 (Strength Cond J 38:42) con il RIR che scende lungo il mesociclo (Zourdos et al.
+  // 2016, J Strength Cond Res 30:267; Israetel, Renaissance Periodization, mesociclo di accumulo).
+  // Mai sotto 1, cioè mai a cedimento, come promette il modale «RIR» dell'app: il cedimento non dà più ipertrofia e costa
+  // più fatica (Refalo et al. 2023, Sports Med 53:649; Vieira et al. 2021). Una base già a 0 (le sedute Pump, carichi
+  // leggeri e scelta del generatore) non si alza: lì il minimo resta 0.
+  // La settimana leggera del rientro (RIR +1 sulla base, al massimo 4) non si somma: vale la più alta delle due.
+  //   rirSettimana(weekNum 1-6, base | null, { leggera }) → numero
+  var RIR_SETTIMANE = [1, 0, 0, -1, -1];
+  var RIR_SCARICO = 3, RIR_MAX = 4;
+  function rirSettimana(weekNum, base, o){
+    o = o || {};
+    var w = Number(weekNum) || 1;
+    if(w === 6) return RIR_SCARICO;
+    var b = (base != null && base !== '' && isFinite(Number(base))) ? Number(base) : 2;
+    var r = Math.max(b < 1 ? 0 : 1, b + (RIR_SETTIMANE[w - 1] || 0));
+    if(o.leggera) r = Math.max(r, Math.min(RIR_MAX, b + RIENTRO.RIR_PIU));
+    return Math.min(RIR_MAX, Math.max(0, r));
+  }
+
   // Le serie previste in una settimana dalla scheda (Training 110): la somma delle serie delle sedute
   // di lavoro (i recuperi non contano). Chi calcola il quadro le passa in ctx.sessioni; senza, null.
   function serieSettimanaliPreviste(sessioni){
@@ -587,7 +610,7 @@ var ZTQuadro = (function(){
     WP_VERSION: WP_VERSION, WP_FASCIA: WP_FASCIA, inFascia: inFascia, giornoScarso: giornoScarso, parolaSettimana: parolaSettimana, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
     workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
-    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, pausaPeriodi: pausaPeriodi, rientro: rientro, serieRientro: serieRientro, RIENTRO: RIENTRO, PAUSA_MODULI: PAUSA_MODULI,
+    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, pausaPeriodi: pausaPeriodi, rientro: rientro, serieRientro: serieRientro, RIENTRO: RIENTRO, rirSettimana: rirSettimana, RIR_SETTIMANE: RIR_SETTIMANE, PAUSA_MODULI: PAUSA_MODULI,
     serieSettimanaliPreviste: serieSettimanaliPreviste,
     fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,
   };

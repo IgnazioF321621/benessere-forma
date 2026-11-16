@@ -856,7 +856,7 @@ function _diffBloccoNuovo(scheda, precedente) {
     const codiciPrima = new Set(((prima && prima.exercises) || []).map(e => e && e.codice).filter(Boolean));
     const codiciDopo = new Set((s.exercises || []).map(e => e && e.codice).filter(Boolean));
     return {
-      id: s.id, name: s.name, type: s.type,
+      id: s.id, name: s.name, type: s.type, rir: s.rir,
       restano: (s.exercises || []).filter(e => e && e.cardine).map(voce),
       nuovi:   (s.exercises || []).filter(e => e && !e.cardine && !codiciPrima.has(e.codice)).map(voce),
       uguali:  (s.exercises || []).filter(e => e && !e.cardine && codiciPrima.has(e.codice)).map(voce),
