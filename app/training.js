@@ -1945,6 +1945,7 @@ function _coCostruisci(riga0, orig){
   if(riga.unilaterale)  nuovo.unilaterale  = String(riga.unilaterale).trim().toLowerCase();
   if(riga.progressione) nuovo.progressione = String(riga.progressione).trim().toLowerCase();
   if(isSurrogato) nuovo.isSurrogato = true;
+  if(isSurrogato && ZTCoachRules.testoSurrogato(riga)) nuovo.rigaSurrogato = ZTCoachRules.testoSurrogato(riga);   // Training 370
   return nuovo;
 }
 // Sostituisce per oggi `exName` della seduta `sid` con l'esercizio `codice`: dai candidati del foglio,
@@ -2033,10 +2034,15 @@ function _renderCambioOggiSheet(){
     const r = c.riga;
     const tag = c.alternativa ? 'alternativa del catalogo' : c.piuFacile ? 'più facile' : (r.livello || '');
     const attrezzo = String(r.attrezzo || '').split(';')[0].trim();
+    // Training 370: col surrogato, sotto il nome con cosa si fa (la regola del generatore)
+    const oc = _coOpzioni();
+    const haC = new Set(ZTCoachRules.attrezziConAlias(oc.attrezzatura));
+    const surrC = oc.tipoAllen === 'casa' && ZTCoachRules.attrezziCasa(r, a => haC.has(a)).surrogato;
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--s2);">
       <div style="flex:1;min-width:0;">
         <div style="font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);">${esc(r.nome)} <span style="font-family:var(--font-mono);font-size:11px;font-weight:400;color:var(--t3);">${esc(r.codice)}</span></div>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px;">${esc([attrezzo, tag].filter(Boolean).join(' · '))}</div>
+        ${surrC ? _rigaSurrogatoHTML(ZTCoachRules.testoSurrogato(r)) : ''}
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px;">${esc([surrC ? null : attrezzo, tag].filter(Boolean).join(' · '))}</div>
       </div>
       <button class="co-scegli" onclick="cambiaPerOggi('${esc1(st.sid)}','${esc1(st.exName)}','${esc1(r.codice)}')" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Scegli</button>
     </div>`;
@@ -3442,6 +3448,13 @@ function _rigaSpiegazione(ex, size){
   const t = spiegazioneEsercizio(ex);
   return t ? `<div class="ex-spiegazione" style="font-size:${size||11}px;color:var(--t3);font-family:var(--font-sans);font-weight:400;line-height:1.3;margin-top:2px;">${esc(t)}</div>` : '';
 }
+// Training 370 (16 novembre 2026): col surrogato il nome resta quello della riga nativa («French press bilanciere panca
+// piana»); sotto si dice con cosa si fa, «Con l'elastico al posto del bilanciere». Il testo è ZTCoachRules.testoSurrogato,
+// messo sull'esercizio dal generatore, da loadActiveScheda e da «Cambia per oggi».
+function _rigaSurrogatoHTML(testo, size){
+  return testo ? `<div class="ex-surrogato-riga" style="font-size:${size||11}px;color:var(--acc);font-family:var(--font-sans);font-weight:600;line-height:1.3;margin-top:2px;">${esc(testo)}</div>` : '';
+}
+const rigaSurrogatoDi = (ex) => (ex && ex.isSurrogato && ex.rigaSurrogato) || '';
 // L'adattamento per le zone a rischio della persona, sotto il nome di una voce del riscaldamento (revisione di
 // 480+490: Ignazio ha ginocchia e lombare nelle limitazioni; il generatore lo mette in `alert`, come per il lavoro)
 function _rigaAdattamento(ex){
@@ -4199,6 +4212,7 @@ function renderTraining(){
                 <span class="ex-info-icon">ⓘ</span>
                 <span class="ex-params-top">${e.sets} × ${esc(_bersaglioReps(e))}</span>
               </div>
+              ${_rigaSurrogatoHTML(rigaSurrogatoDi(e), 12)}
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
@@ -4919,7 +4933,7 @@ function renderTraining(){
           <div>
             <strong style="font-size:17px;display:block;line-height:1.25;">${nomeCortoConTag(ai.exName)}${attrezzoTagHtml(ai.eq)}</strong>
             ${ai.sessionLabel ? `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">${ai.sessionLabel}</div>` : ''}
-            ${ai.isSurrogato ? `<div class="ex-surrogato-note" style="margin-top:6px;">⚠ Versione adattata · ${(ai.surrogatoEq||'').toUpperCase()}</div>` : ''}
+            ${ai.isSurrogato ? (ai.rigaSurrogato ? _rigaSurrogatoHTML(ai.rigaSurrogato, 13) : `<div class="ex-surrogato-note" style="margin-top:6px;">⚠ Versione adattata · ${(ai.surrogatoEq||'').toUpperCase()}</div>`) : ''}
             ${(document.documentElement.classList.contains('v5') && !isPullUpExercise(ai.exName)) ? `<div class="ex5-nota-carico">Carichi in ${(ST.profile && ST.profile.unit) || 'lbs'} indicativi · scarto ±15% per gli elastici a tubo</div>` : ''}
           </div>
           <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
@@ -5492,6 +5506,7 @@ async function openExerciseAI(exName, sessionId) {
   if (ex?.isSurrogato) {
     baseAi.isSurrogato = true;
     baseAi.surrogatoEq = ex.eq || '';
+    baseAi.rigaSurrogato = rigaSurrogatoDi(ex);   // Training 370
   }
   ST.exerciseAIOpen = baseAi;
   renderTraining();
@@ -7274,9 +7289,10 @@ function renderBloccoNuovoSheet(){
   if(bn.loading){
     corpo = `<div class="pianov4-weighin-body"><p style="font-family:var(--font-sans);font-size:14px;color:var(--t2);margin:0 0 12px;">${esc(COACH_NAME)} sta preparando il blocco nuovo…</p></div>`;
   } else {
-    const riga = (txt, sub, tono, cambia) => `<div style="padding:7px 0;border-bottom:1px solid var(--s2);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    const riga = (txt, sub, tono, cambia, surr) => `<div style="padding:7px 0;border-bottom:1px solid var(--s2);display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div style="min-width:0;">
           <div style="font-size:13px;font-weight:${tono === 'resta' ? 700 : 500};font-family:var(--font-sans);color:${tono === 'esce' ? 'var(--t3)' : 'var(--t1)'};${tono === 'esce' ? 'text-decoration:line-through;' : ''}">${esc(txt)}</div>
+          ${_rigaSurrogatoHTML(surr)}
           ${sub ? `<div style="font-size:11px;font-family:var(--font-mono);color:${tono === 'resta' ? 'var(--acc)' : 'var(--t3)'};margin-top:2px;">${esc(sub)}</div>` : ''}
         </div>
         ${cambia ? `<button class="bn-cambia" onclick="apriCambioBloccoNuovo('${cambia.sid}','${cambia.codice}')" style="flex-shrink:0;background:none;border:1px solid var(--s3);border-radius:8px;padding:5px 9px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--acc);cursor:pointer;">Cambia ›</button>` : ''}
@@ -7291,7 +7307,8 @@ function renderBloccoNuovoSheet(){
         <div onclick="cambiaEsercizioBloccoNuovo('${c.sid}','${c.codice}','${k.codice}')" style="padding:9px 0;border-bottom:1px solid var(--s2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div style="min-width:0;">
             <div style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t1);">${esc(k.nome)}</div>
-            <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);margin-top:2px;">${esc([k.attrezzo, k.surrogato ? 'versione casalinga' : null, k.livello].filter(Boolean).join(' · '))}${k.fattoPrima ? ' · <span style="color:var(--t2);">fatto nel blocco prima</span>' : ' · <span style="color:var(--acc);">mai fatto</span>'}</div>
+            ${_rigaSurrogatoHTML(k.rigaSurrogato)}
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);margin-top:2px;">${esc([k.surrogato && k.rigaSurrogato ? null : k.attrezzo, k.surrogato && !k.rigaSurrogato ? 'versione casalinga' : null, k.livello].filter(Boolean).join(' · '))}${k.fattoPrima ? ' · <span style="color:var(--t2);">fatto nel blocco prima</span>' : ' · <span style="color:var(--acc);">mai fatto</span>'}</div>
           </div>
           <span style="font-size:15px;color:var(--t3);">›</span>
         </div>`).join('') : `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Con i tuoi attrezzi non c'è un'altra alternativa per questo posto.</p>`;
@@ -7306,9 +7323,9 @@ function renderBloccoNuovoSheet(){
     const sedute = (bn.diff || []).map(d => `
       <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${esc(d.name)} <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">${esc((d.type || '').toUpperCase())}</span></div>
-        ${d.restano.length ? sep('RESTANO · CARDINI') + d.restano.map(r => riga(r.name, _testoPartenza(bn.partenze[r.codice], r.name), 'resta')).join('') : ''}
-        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${r.sets} × ${r.reps}${r.sceltoDaTe ? ' · scelto da te' : ''}`, 'nuovo', { sid: d.id, codice: r.codice })).join('') : ''}
-        ${d.uguali.length ? sep('COME PRIMA') + d.uguali.map(r => riga(r.name, r.sceltoDaTe ? 'scelto da te' : '', 'uguale', { sid: d.id, codice: r.codice })).join('') : ''}
+        ${d.restano.length ? sep('RESTANO · CARDINI') + d.restano.map(r => riga(r.name, _testoPartenza(bn.partenze[r.codice], r.name), 'resta', null, r.rigaSurrogato)).join('') : ''}
+        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${r.sets} × ${r.reps}${r.sceltoDaTe ? ' · scelto da te' : ''}`, 'nuovo', { sid: d.id, codice: r.codice }, r.rigaSurrogato)).join('') : ''}
+        ${d.uguali.length ? sep('COME PRIMA') + d.uguali.map(r => riga(r.name, r.sceltoDaTe ? 'scelto da te' : '', 'uguale', { sid: d.id, codice: r.codice }, r.rigaSurrogato)).join('') : ''}
         ${d.escono.length ? sep('ESCONO') + d.escono.map(r => riga(r.name, '', 'esce')).join('') : ''}
       </div>`).join('');
     corpo = `
