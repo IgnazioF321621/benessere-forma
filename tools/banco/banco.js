@@ -253,6 +253,15 @@ function boot(tables, opts={}){
   // La pagina parte da sola (il BOOTSTRAP non aspetta più, Fondamenta 100): con tables.__sessione entra,
   // senza mostra l'accesso. Una prova che avvia a mano (loadAndStart) e poi guarda le schermate aspetta
   // prima `await avviato`, altrimenti la partenza automatica le arriva sopra.
+  // Il RIR che scende lungo il blocco (Training 380, 16 novembre 2026): le prove scritte prima contano sul RIR di base
+  // (quello dell'esercizio o della seduta), e partono senza allenamenti, cioè nella settimana 1 (RIR +1). Il banco le
+  // tiene sul RIR di base: le settimane 1-5 valgono come la 2 (scostamento 0), lo scarico resta lo scarico. Chi prova la
+  // rampa passa opts.rampaRir (prova_training_380).
+  const Q = dom.window.ZTQuadro;
+  if(!opts.rampaRir && Q && typeof Q.rirSettimana === 'function'){
+    const vera = Q.rirSettimana;
+    Q.rirSettimana = (w, b, o) => vera(Number(w) === 6 ? 6 : 2, b, o);
+  }
   return { dom, win: dom.window, supa, logs, avviato: new Promise(r => dom.window.setTimeout(r, 0)) };
 }
 module.exports = { boot, makeSupaMock };

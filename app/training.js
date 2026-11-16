@@ -2488,15 +2488,18 @@ async function loadTrainingAllCompleted(opts){
     const { data, error } = await q;
     if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
     ST.trainAllCompleted = data || [];
-    // L'ultima seduta di lavoro prima del blocco (Training 360): un blocco nuovo accettato al rientro parte oggi, e lo
-    // stop che decide la settimana leggera sta prima di lui. Una riga sola, in sottofondo.
+    // Le ultime sedute di lavoro prima del blocco (Training 360): un blocco nuovo accettato al rientro parte oggi, e lo
+    // stop che decide la settimana leggera sta prima di lui. Non una sola (revisione del 380): se al rientro si è fatta
+    // una seduta nel blocco di prima e poi si accetta il nuovo, senza le sedute della ripresa la regola vedeva uno stop
+    // di un giorno e la settimana leggera promessa dall'anteprima spariva. Le ultime 10: la settimana della ripresa
+    // (al massimo 7 giorni) e quella prima dello stop. In sottofondo.
     if(ST.profile && ST.profile.train_start_date){
-      const r = await dbq('leggere l\'ultimo allenamento prima del blocco', supa.from('workouts').select('session_type, date')
+      const r = await dbq('leggere gli ultimi allenamenti prima del blocco', supa.from('workouts').select('session_type, date')
         .eq('user_id', ST.user.id).eq('completed', true).lt('date', ST.profile.train_start_date)
         .not('session_type', 'in', '(rest,rest_injury,recoveryUpper,recoveryLower)')
-        .order('date', { ascending:false }).limit(1), { silenzioso:true });
-      ST.trainUltimaPrimaDelBlocco = (!r.error && r.data && r.data[0]) ? r.data[0] : null;
-    } else ST.trainUltimaPrimaDelBlocco = null;
+        .order('date', { ascending:false }).limit(10), { silenzioso:true });
+      ST.trainPrimaDelBlocco = (!r.error && Array.isArray(r.data)) ? r.data : [];
+    } else ST.trainPrimaDelBlocco = [];
     applicaRientro();   // le serie della settimana leggera, se c'è
     if(!(opts && opts.skipRender)){
       if(ST.page === 'training') renderTraining();
@@ -2526,11 +2529,11 @@ async function loadTrainingAllCompleted(opts){
 // (applicaRientro), mai nella scheda.
 function _rientroNoKey(){ return 'zt_rientro_no_' + ((ST.user && ST.user.id) || 'anon'); }
 function _rientroNo(){ try { return localStorage.getItem(_rientroNoKey()) || null; } catch(e){ return null; } }
-// Il rientro di oggi dalla regola, o null. Le sedute: quelle del blocco più l'ultima prima del blocco (un blocco nuovo
+// Il rientro di oggi dalla regola, o null. Le sedute: quelle del blocco più le ultime prima del blocco (un blocco nuovo
 // accettato al rientro parte oggi, e lo stop sta prima di lui).
 function rientroDiOggi(){
   if(!ST.profile || typeof ZTQuadro === 'undefined' || typeof ZTQuadro.rientro !== 'function') return null;
-  const completati = (ST.trainAllCompleted || []).concat(ST.trainUltimaPrimaDelBlocco ? [ST.trainUltimaPrimaDelBlocco] : []);
+  const completati = (ST.trainAllCompleted || []).concat(ST.trainPrimaDelBlocco || []);
   const r = ZTQuadro.rientro({ completati, profile: ST.profile, oggi: todayKey(),
     settimanaPrima: (d) => { try { return getCycleWeekInfo({ asOf: d }).weekNum; } catch(e){ return null; } } });
   if(!r) return null;
@@ -2606,6 +2609,17 @@ function rirObiettivo(ex, sess){
   if(ex && ex.rir != null && ex.rir !== '' && isFinite(Number(ex.rir))) return Number(ex.rir);
   return (sess && sess.rir != null && sess.rir !== '') ? Number(sess.rir) : null;
 }
+// Il RIR di oggi (Training 380, 16 novembre 2026): il RIR di base (rirObiettivo) passato dalla regola della settimana del
+// blocco, ZTQuadro.rirSettimana (RIR 3 · 2 · 2 · 1 · 1 sulla base 2, scarico 3, la settimana leggera del rientro non si
+// somma). Fonte sola per la PROSSIMA, l'obiettivo della prima serie, la pillola della card e le testate: mai una seconda regola.
+function _rirSettimanaOggi(base){
+  let w = 1;
+  try { w = getCycleWeekInfo().weekNum; } catch(e){}
+  return ZTQuadro.rirSettimana(w, base, { leggera: !!getSoftReturn() });
+}
+function rirDiOggi(ex, sess){ return _rirSettimanaOggi(rirObiettivo(ex, sess)); }
+// Il RIR della seduta di oggi per le testate (null nelle sedute senza RIR: recupero, riposo, principianti)
+function rirSedutaOggi(sess){ return (sess && sess.rir != null && sess.rir !== '') ? _rirSettimanaOggi(sess.rir) : null; }
 
 // Con `struttura:true` (Training 040) restituisce { testo, reps, resistance, bandColor, rir, via }: gli stessi
 // numeri del testo, per compilare il registro della serie dopo. Una regola sola per PROSSIMA e per
@@ -2622,15 +2636,11 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // Training 520): ogni suggerimento mostra "per lato". Una riga sola → copre tutti i rami.
   const unitLbl = (isTimed ? 'sec' : 'reps') + (_contaPerLato(exData, parsed) ? ' per lato' : '');
   const step = isTimed ? 5 : 1; // +5 sec o +1 rep
-  // Settimana 4 (SCARICO): RIR target forzato a 3 su TUTTI i rami (trazioni,
-  // elastici/corpo libero, isometrici) — override sul RIR obiettivo, Pump incluso.
-  // Fuori dallo scarico: il RIR obiettivo dell'esercizio (rirObiettivo, Training 460), o 2.
-  const _rirEx = rirObiettivo(exData, sess);
-  let targetRIR = getCycleWeekInfo().isScarico ? 3 : ((_rirEx != null) ? _rirEx : 2);
-  // Settimana leggera dopo uno stop (Training 360): RIR consigliato +1 su tutti i rami.
-  // Il carico ridotto vive nell'obiettivo della prima serie (niente riduzione qui: comporrebbe il −% a ogni serie).
-  const _softRet = getSoftReturn();
-  if(_softRet) targetRIR = Math.min(4, targetRIR + ZTQuadro.RIENTRO.RIR_PIU);
+  // Il RIR obiettivo di oggi (Training 380): la base dell'esercizio (rirObiettivo, Training 460, o 2) passata dalla
+  // settimana del blocco (RIR 3 · 2 · 2 · 1 · 1 sulla base 2; scarico 3 su tutti i rami) e dalla settimana leggera del
+  // rientro (Training 360, +1 sulla base, la più alta delle due). Il carico ridotto del rientro vive nell'obiettivo della
+  // prima serie (niente riduzione qui: comporrebbe il −% a ogni serie).
+  const targetRIR = rirDiOggi(exData, sess);
   const nextSetNum = (Number(setNum) || 0) + 1;
   // Difensivo: se per qualunque motivo è l'ultima serie (o oltre), niente PROSSIMA.
   if(exData.sets && nextSetNum > exData.sets) return '';
@@ -4060,7 +4070,7 @@ function renderTraining(){
         </div>` : '';
       const typeBadge = isRecovery
         ? `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
-        : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${scaricoBadge}${rientroBadge}${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
+        : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+rirSedutaOggi(s):''}</span>${scaricoBadge}${rientroBadge}${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
       // Blocco Attivazione: nuovo flow ibrido con hero card (Fase 12 mag 2026)
       const activationSection = _renderActivationSection();
@@ -4190,8 +4200,8 @@ function renderTraining(){
         if(isOpen) cardClasses.push('logging');
         if(v5Seduta && exIdx === primoDaFare) cardClasses.push('ex5-prossimo');
         // il RIR della seduta sta in testata (giro 2): sulla riga resta solo se l'esercizio ne ha uno suo (Training 460)
-        const rirRiga = rirObiettivo(e, s);
-        const mostraRir = rirRiga != null && !isTimed && (!v5Seduta || rirRiga !== s.rir);
+        const rirRiga = rirObiettivo(e, s) != null ? rirDiOggi(e, s) : null;   // Training 380: quello della settimana
+        const mostraRir = rirRiga != null && !isTimed && (!v5Seduta || rirRiga !== rirSedutaOggi(s));
         const safeSel = String(sel).replace(/'/g, "\\'");
         const menu5 = (v5Seduta && ST.ex5Menu === e.name) ? `
             <div class="ex5-menu" role="menu">
@@ -4342,11 +4352,7 @@ function renderTraining(){
       { day:'G6', session:'recoveryLower',label:'Recovery Day', desc:'Recupero attivo', color:'var(--acc)', bg:'var(--acc-lt)' },
     ];
     const CYCLE_WEEKS = [
-      { n:1, type:'CARICO',  rir:'RIR 2 / 1', active:false },
-      { n:2, type:'CARICO',  rir:'RIR 2 / 1', active:false },
-      { n:3, type:'CARICO',  rir:'RIR 2 / 1', active:false },
-      { n:4, type:'CARICO',  rir:'RIR 1 / 1', active:false },
-      { n:5, type:'CARICO',  rir:'RIR 1 / 1', active:false },
+      ...[1, 2, 3, 4, 5].map(n => ({ n, type:'CARICO', rir:`RIR ${ZTQuadro.rirSettimana(n, 2)} / ${ZTQuadro.rirSettimana(n, 1)}`, active:false })),   // Training 380: Forza / Ipertrofia, dalla regola
       { n:6, type:'SCARICO', rir:'RIR 3+',     active:false },
     ];
     // Settimana corrente: helper canonico getCycleWeekInfo() — stessa
@@ -4601,7 +4607,7 @@ function renderTraining(){
           ? `${(todayTargetSess.exercises || []).length} esercizi · ~25 min`
           : (/^rest/.test(todayTargetSid) || todayTargetSess.type === 'Riposo' || todayTargetSess.rir == null)
             ? '' // rest day / sessione senza RIR: niente "RIR null · 0 esercizi"
-            : `RIR ${todayTargetSess.rir} · ${(todayTargetSess.exercises || []).length} esercizi · circa ${minutiSeduta(todayTargetSess)} min`)
+            : `RIR ${rirSedutaOggi(todayTargetSess)} · ${(todayTargetSess.exercises || []).length} esercizi · circa ${minutiSeduta(todayTargetSess)} min`)
       : '';
     const shortcutHTML = `
       <div ${riposoOggi ? '' : `onclick="openTrainingSession('${todayTargetSid}')" `}style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -5201,7 +5207,7 @@ function renderTraining(){
     // Badge: reps + RIR (riusa la convenzione della card sessione). «per lato» sul bersaglio negli esercizi un lato
     // alla volta e negli alternati (Training 520: prima l'alternato aveva un secondo badge «1 rip = dx + sx»)
     const repsBadge = exDef?.reps ? `<span class="train-exec-badge">${esc(_bersaglioReps(exDef))}</span>` : '';
-    const rirVal = sessDef.rir;
+    const rirVal = sessDef.rir == null ? null : (exDef ? rirDiOggi(exDef, sessDef) : rirSedutaOggi(sessDef));   // Training 380
     // RIR nascosto per esercizi temporali (iso:true con reps in secondi) — coerente con renderTraining
     const parsedReps = exDef?.reps ? (typeof parseRepsRange === 'function' ? parseRepsRange(exDef.reps) : null) : null;
     const isTimed = parsedReps && parsedReps.kind === 'seconds';
@@ -6040,7 +6046,7 @@ function _testaSedutaV5(s, sel, subnav, tabs){
   const totalSets = (s.exercises || []).reduce((acc, ex) => acc + (Number(ex.sets) || 0), 0);
   const doneSets = Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(sel + '_') && k.endsWith('_' + today)).length;
   const pct = totalSets > 0 ? Math.min(100, Math.round((doneSets / totalSets) * 100)) : 0;
-  const tipo = [s.type ? s.type.toUpperCase() : '', s.rir != null ? 'RIR ' + s.rir : ''].filter(Boolean).join(' · ');
+  const tipo = [s.type ? s.type.toUpperCase() : '', s.rir != null ? 'RIR ' + rirSedutaOggi(s) : ''].filter(Boolean).join(' · ');
   return `
     <div class="t5-testa">
       <div class="t5-su"><button class="t5-indietro" onclick="closeTrainingSession();">‹ I tuoi giorni</button></div>
@@ -7298,6 +7304,13 @@ function renderBloccoNuovoSheet(){
         ${cambia ? `<button class="bn-cambia" onclick="apriCambioBloccoNuovo('${cambia.sid}','${cambia.codice}')" style="flex-shrink:0;background:none;border:1px solid var(--s3);border-radius:8px;padding:5px 9px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--acc);cursor:pointer;">Cambia ›</button>` : ''}
       </div>`;
     const sep = (lbl) => `<div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin:10px 0 2px;">${lbl}</div>`;
+    // Training 380: la prima settimana del blocco nuovo. Se oggi c'è la settimana leggera del rientro (rientroDiOggi: è
+    // indipendente dal blocco, e un blocco accettato oggi parte nella settimana 1) le serie si vedono a ⅔ come in seduta
+    // (ZTQuadro.serieRientro); il RIR della prima settimana dalla regola (ZTQuadro.rirSettimana), per tipo di seduta.
+    const rl = rientroDiOggi();
+    const leggeraBN = !!(rl && rl.leggera);
+    const serieBN = (n) => leggeraBN ? ZTQuadro.serieRientro(n) : n;
+    const rirBN = (d) => (d && d.rir != null && d.rir !== '') ? ZTQuadro.rirSettimana(1, d.rir, { leggera: leggeraBN }) : null;
     // «Cambia ›» aperto su uno slot: al posto delle sedute, le alternative di quel posto
     if(bn.cambio){
       const c = bn.cambio;
@@ -7322,15 +7335,17 @@ function renderBloccoNuovoSheet(){
     } else {
     const sedute = (bn.diff || []).map(d => `
       <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
-        <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${esc(d.name)} <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">${esc((d.type || '').toUpperCase())}</span></div>
+        <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${esc(d.name)} <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">${esc([(d.type || '').toUpperCase(), rirBN(d) != null ? 'RIR ' + rirBN(d) + ' LA PRIMA SETTIMANA' : null].filter(Boolean).join(' · '))}</span></div>
         ${d.restano.length ? sep('RESTANO · CARDINI') + d.restano.map(r => riga(r.name, _testoPartenza(bn.partenze[r.codice], r.name), 'resta', null, r.rigaSurrogato)).join('') : ''}
-        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${r.sets} × ${r.reps}${r.sceltoDaTe ? ' · scelto da te' : ''}`, 'nuovo', { sid: d.id, codice: r.codice }, r.rigaSurrogato)).join('') : ''}
+        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${serieBN(r.sets)} × ${r.reps}${r.sceltoDaTe ? ' · scelto da te' : ''}`, 'nuovo', { sid: d.id, codice: r.codice }, r.rigaSurrogato)).join('') : ''}
         ${d.uguali.length ? sep('COME PRIMA') + d.uguali.map(r => riga(r.name, r.sceltoDaTe ? 'scelto da te' : '', 'uguale', { sid: d.id, codice: r.codice }, r.rigaSurrogato)).join('') : ''}
         ${d.escono.length ? sep('ESCONO') + d.escono.map(r => riga(r.name, '', 'esce')).join('') : ''}
       </div>`).join('');
     corpo = `
       <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:10px;">
         <p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);margin:0 0 12px;line-height:1.45;">Se accetti: il ${nomeBlocco} parte da Upper A, il conteggio delle settimane riparte da 1 e la scheda di adesso${nomePrima ? ` (${nomePrima})` : ''} resta salvata.</p>
+        <p class="bn-rampa" style="font-family:var(--font-sans);font-size:13px;color:var(--t2);margin:0 0 12px;line-height:1.45;">Si parte morbidi e si sale: RIR ${ZTQuadro.rirSettimana(1, 2)} la prima settimana, poi ${[2, 3, 4, 5].map(n => ZTQuadro.rirSettimana(n, 2)).join(' · ')}, e la sesta è lo scarico.</p>
+        ${leggeraBN ? `<div class="bn-leggera" style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin:0 0 12px;">PRIMA SETTIMANA LEGGERA FINO AL ${esc(_pausaFmt(rl.finoA).toUpperCase())} · SERIE A ⅔, CARICO AL ${Math.round(ZTQuadro.RIENTRO.CARICO * 100)}%</div>` : ''}
         ${sedute}
       </div>
       <div class="pianov4-weighin-cta-wrap">
@@ -7434,7 +7449,7 @@ function showInfoModal(key) {
     },
     dup: {
       title: 'DUP — Daily Undulating Periodization',
-      text: 'Alternare sessioni di Forza (rep basse, RIR 2) e Ipertrofia (rep alte, RIR 1) nella stessa settimana. Varia il tipo di stress neuromuscolare, riduce il rischio di overuse ed è il metodo più efficace per sviluppare forza e massa simultaneamente.'
+      text: 'Alternare sessioni di Forza (rep basse, RIR 2 di base) e Ipertrofia (rep alte, RIR 1 di base) nella stessa settimana; nel blocco il RIR parte un punto più alto la prima settimana e scende di uno nella quarta e nella quinta, mai sotto 1. Varia il tipo di stress neuromuscolare, riduce il rischio di overuse ed è il metodo più efficace per sviluppare forza e massa simultaneamente.'
     },
     scarico: {
       title: 'Settimana di Scarico',
