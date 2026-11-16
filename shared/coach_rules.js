@@ -427,6 +427,12 @@ var ZTCoachRules = (function(){
   //     la riga va col surrogato: «Affondo indietro manubri» (corpo libero;manubri, surrogato elastico) a casa
   //     senza manubri si fa con l'elastico, che è un carico che cresce, non più a corpo libero.
   // Box, sedia, maniglie e palla medica non si possono segnare nell'attrezzatura: restano come prima.
+  // Training 370 (16 novembre 2026, il blocco nuovo di Ignazio): lo stesso vale per ogni riga con un CARICO e qualcos'altro,
+  // anche senza «corpo libero». «Rematore manubri panca piana» (manubri;panca) con la sola panca passava come nativo e si
+  // faceva senza carico; «Pushdown cavo un braccio» (cavo;maniglie) con le sole maniglie, uguale (41 righe del catalogo per
+  // l'attrezzatura di Ignazio). Il carico serve (ne basta uno), gli appoggi sceglibili servono tutti; se il carico manca si
+  // va col surrogato; senza surrogato la riga si fa solo se elenca anche «corpo libero». Le righe senza carichi, o di soli
+  // carichi («elastico;manubri»: ne basta uno), restano come prima.
   // haAttrezzo(parola normalizzata, «corpo_libero») → bool: ogni chiamante passa il suo insieme. Il corpo libero c'è
   // sempre, come nel generatore e come dice l'onboarding («Il corpo libero è sempre incluso», revisione del 550).
   // → { ok, surrogato }
@@ -439,13 +445,21 @@ var ZTCoachRules = (function(){
     var surrogati = vfLista(ex && ex.surrogato_attrezzo, '+').map(vfAttrezzo);
     var surrOk = surrogati.length > 0 && surrogati.every(function(a){ return haAttrezzo(a); });
     var col = function(ok){ return ok ? { ok: true, surrogato: false } : surrOk ? { ok: true, surrogato: true } : { ok: false, surrogato: false }; };
-    var misto = nativi.indexOf('corpo_libero') !== -1 && nativi.length > 1;
-    if(!misto) return col(nativi.some(function(a){ return haAttrezzo(a); }));
-    var appoggi = nativi.filter(function(a){ return APPOGGI_SCEGLIBILI.indexOf(a) !== -1; });
-    if(!appoggi.every(function(a){ return haAttrezzo(a); })) return col(false);
+    var conLibero = nativi.indexOf('corpo_libero') !== -1;
     var carichi = nativi.filter(function(a){ return CARICHI.indexOf(a) !== -1; });
-    if(carichi.length && !carichi.some(function(a){ return haAttrezzo(a); }) && surrOk) return { ok: true, surrogato: true };
-    return { ok: true, surrogato: false };
+    var appoggi = nativi.filter(function(a){ return APPOGGI_SCEGLIBILI.indexOf(a) !== -1; });
+    var appoggiOk = appoggi.every(function(a){ return haAttrezzo(a); });
+    // un carico e qualcos'altro (Training 370; con «corpo libero» era già così dal 550)
+    if(carichi.length && nativi.length > carichi.length){
+      if(!appoggiOk) return col(false);
+      if(carichi.some(function(a){ return haAttrezzo(a); })) return { ok: true, surrogato: false };
+      if(surrOk) return { ok: true, surrogato: true };
+      return conLibero ? { ok: true, surrogato: false } : { ok: false, surrogato: false };
+    }
+    // «corpo libero» con un appoggio, senza carichi (Training 550): l'appoggio serve
+    if(conLibero && nativi.length > 1) return col(appoggiOk);
+    // un attrezzo solo, o soli carichi, o accessori: ne basta uno, come sempre
+    return col(nativi.some(function(a){ return haAttrezzo(a); }));
   }
 
   // ── L'attrezzatura del profilo e le parole del catalogo (Training 560, 2 novembre 2026) ──
