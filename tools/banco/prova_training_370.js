@@ -77,7 +77,7 @@ const prima = (ex, h0) => {
   atteso('5 · manubri;panca → elastico+panca', t('manubri;panca', 'elastico+panca'), "Con l'elastico al posto dei manubri");
   atteso('5 · cavi → elastico+panca', t('cavi', 'elastico+panca'), "Con l'elastico e la panca al posto dei cavi");
   atteso('5 · cavo;maniglie → elastico: si sostituisce il carico', t('cavo;maniglie', 'elastico'), "Con l'elastico al posto del cavo");
-  atteso('5 · kettlebell;manubri → elastico', t('kettlebell;manubri', 'elastico'), "Con l'elastico al posto del kettlebell e dei manubri");
+  atteso('5 · kettlebell;manubri → elastico', t('kettlebell;manubri', 'elastico'), "Con l'elastico al posto della kettlebell e dei manubri");
   atteso('5 · conetti → corpo libero', t('conetti', 'corpo libero'), 'A corpo libero al posto dei conetti');
   atteso('5 · box → panca', t('box', 'panca'), 'Con la panca al posto del box');
   atteso('5 · parallele → elastico', t('parallele', 'elastico'), "Con l'elastico al posto delle parallele");

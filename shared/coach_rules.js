@@ -467,7 +467,7 @@ var ZTCoachRules = (function(){
   // sotto il nome si dice con cosa, «Con l'elastico al posto del bilanciere». Si nomina quello che il surrogato aggiunge e
   // quello che sostituisce: i carichi della riga, se ne ha, altrimenti gli attrezzi che non sono anche nel surrogato.
   // Una parola senza articolo noto si scrive col «di». → testo, o '' se non c'è niente da dire.
-  var ARTICOLI = { elastico: ["l'", "dell'"], manubri: ['i ', 'dei '], bilanciere: ['il ', 'del '], kettlebell: ['il ', 'del '],
+  var ARTICOLI = { elastico: ["l'", "dell'"], manubri: ['i ', 'dei '], bilanciere: ['il ', 'del '], kettlebell: ['la ', 'della '],
     macchina: ['la ', 'della '], multipower: ['il ', 'del '], cavo: ['il ', 'del '], cavi: ['i ', 'dei '], cavo_basso: ['il ', 'del '],
     cavo_alto: ['il ', 'del '], corda: ['la ', 'della '], palla_medica: ['la ', 'della '], disco: ['il ', 'del '], barra: ['la ', 'della '],
     trap_bar: ['la ', 'della '], rullino: ['il ', 'del '], pinza_a_molla: ['la ', 'della '], panca: ['la ', 'della '],
