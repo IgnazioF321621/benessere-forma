@@ -641,7 +641,7 @@ async function loadActiveScheda() {
     try {
       const { data: catRows, error: catErr } = await dbqAll('leggere i nomi del catalogo esercizi', () => supa
         .from('esercizi_catalog')
-        .select('codice, nome, unilaterale, progressione, pattern, gruppo_target, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio, spiegazione')
+        .select('codice, nome, unilaterale, progressione, pattern, gruppo_target, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio, spiegazione, attrezzo, surrogato_attrezzo')
         .order('codice', {ascending:true}), {silenzioso:true});
       if (catErr) {
         console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
@@ -684,6 +684,9 @@ async function loadActiveScheda() {
           if (t.muscles.length)      ex.muscles = t.muscles;
           if (conAlert && t.alert)   ex.alert = t.alert;
           if (riga.spiegazione && String(riga.spiegazione).trim()) ex.spiegazione = String(riga.spiegazione).trim();   // Training 390
+          // Training 370: col surrogato, sotto il nome «Con l'elastico al posto del bilanciere», dalla riga di oggi
+          const rs = ex.isSurrogato ? ZTCoachRules.testoSurrogato(riga) : '';
+          if (rs) ex.rigaSurrogato = rs; else delete ex.rigaSurrogato;
         };
         const remapEx = (ex, conAlert) => {
           if (!ex || !ex.codice) return;                 // no codice → tieni snapshot
@@ -847,7 +850,7 @@ function _diffBloccoNuovo(scheda, precedente) {
   const nomeDi = (ex) => (ex && ex.codice && _nomeDaCodice(ex.codice)) || (ex && ex.name) || '';
   const perId = {};
   ((precedente && precedente.sessioni) || []).forEach(s => { if (s && s.id) perId[s.id] = s; });
-  const voce = (e) => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps, sceltoDaTe: !!e.sceltoDaTe });
+  const voce = (e) => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps, sceltoDaTe: !!e.sceltoDaTe, rigaSurrogato: (e.isSurrogato && e.rigaSurrogato) || '' });
   return (scheda.sessioni || []).map(s => {
     const prima = perId[s.id];
     const codiciPrima = new Set(((prima && prima.exercises) || []).map(e => e && e.codice).filter(Boolean));
@@ -887,7 +890,7 @@ function candidatiBloccoNuovo(sid, codice) {
   return pool
     .filter(ex => ex.codice !== codice && !inScheda.has(ex.codice))
     .filter(ex => perGruppo ? (_normPattern(ex.pattern) === pat && gt(ex).some(g => gtAttuale.includes(g))) : _normPattern(ex.pattern) === pat)
-    .map(ex => ({ codice: ex.codice, nome: ex.nome, attrezzo: ex._surrogato ? (ex.surrogato_attrezzo || ex.attrezzo) : ex.attrezzo, surrogato: !!ex._surrogato, livello: ex.livello || '', livelloN: livelloN(ex), fattoPrima: prima.has(ex.codice) }))
+    .map(ex => ({ codice: ex.codice, nome: ex.nome, attrezzo: ex._surrogato ? (ex.surrogato_attrezzo || ex.attrezzo) : ex.attrezzo, surrogato: !!ex._surrogato, rigaSurrogato: ex._surrogato ? ZTCoachRules.testoSurrogato(ex) : '', livello: ex.livello || '', livelloN: livelloN(ex), fattoPrima: prima.has(ex.codice) }))
     .sort((a, b) => (a.surrogato - b.surrogato) || (a.fattoPrima - b.fattoPrima) || String(a.codice).localeCompare(String(b.codice)));
 }
 
@@ -3346,6 +3349,7 @@ function _trainGenMapWarmupExercise(cat, limitazioni) {
     note:         'Riscaldamento · carico leggero, mai a cedimento',
     warmup:       true,         // marker: item di warm-up, non esercizio di lavoro
     ...(surr ? { isSurrogato: true } : {}),
+    ...(surr && ZTCoachRules.testoSurrogato(cat) ? { rigaSurrogato: ZTCoachRules.testoSurrogato(cat) } : {}),   // Training 370
     ...(t.alert ? { alert: t.alert } : {}),
   };
 }
@@ -3511,6 +3515,7 @@ function _trainGenMapCarryExercise(cat) {
     muscles:      splitField(cat.muscoli),
     note:         'Carry conclusivo · core, grip e postura · non a cedimento',
     isSurrogato:  isSurrogato || undefined,
+    rigaSurrogato: (isSurrogato && ZTCoachRules.testoSurrogato(cat)) || undefined,   // Training 370
     carry:        true,        // marker: item di carry conclusivo
   };
 }
@@ -3824,6 +3829,8 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
     // isSurrogato serve ancora per `eq` (mostra surrogato_attrezzo) e
     // tracciabilità. La nota_surrogato non è più un campo separato: è il setup.
     if (isSurrogato) exObj.isSurrogato = true;
+    // Training 370: la riga sotto il nome («Con l'elastico al posto del bilanciere»), per l'anteprima del blocco nuovo
+    if (isSurrogato && ZTCoachRules.testoSurrogato(cat)) exObj.rigaSurrogato = ZTCoachRules.testoSurrogato(cat);
     // Traceability: se è stato sostituito tramite cautele
     if (w.originalCodice) exObj.replacedFromCodice = w.originalCodice;
 

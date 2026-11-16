@@ -462,6 +462,35 @@ var ZTCoachRules = (function(){
     return col(nativi.some(function(a){ return haAttrezzo(a); }));
   }
 
+  // ── La riga sotto il nome col surrogato (Training 370, 16 novembre 2026) ──
+  // Il nome resta quello della riga nativa («French press bilanciere panca piana») anche quando a casa si fa col surrogato:
+  // sotto il nome si dice con cosa, «Con l'elastico al posto del bilanciere». Si nomina quello che il surrogato aggiunge e
+  // quello che sostituisce: i carichi della riga, se ne ha, altrimenti gli attrezzi che non sono anche nel surrogato.
+  // Una parola senza articolo noto si scrive col «di». → testo, o '' se non c'è niente da dire.
+  var ARTICOLI = { elastico: ["l'", "dell'"], manubri: ['i ', 'dei '], bilanciere: ['il ', 'del '], kettlebell: ['il ', 'del '],
+    macchina: ['la ', 'della '], multipower: ['il ', 'del '], cavo: ['il ', 'del '], cavi: ['i ', 'dei '], cavo_basso: ['il ', 'del '],
+    cavo_alto: ['il ', 'del '], corda: ['la ', 'della '], palla_medica: ['la ', 'della '], disco: ['il ', 'del '], barra: ['la ', 'della '],
+    trap_bar: ['la ', 'della '], rullino: ['il ', 'del '], pinza_a_molla: ['la ', 'della '], panca: ['la ', 'della '],
+    panca_inclinata: ['la ', 'della '], panca_declinata: ['la ', 'della '], panca_scott: ['la ', 'della '], panca_romana: ['la ', 'della '],
+    fitball: ['la ', 'della '], sbarra: ['la ', 'della '], trx: ['il ', 'del '], parallele: ['le ', 'delle '], maniglie: ['le ', 'delle '],
+    conetti: ['i ', 'dei '], box: ['il ', 'del '], anelli: ['gli ', 'degli '], sedia: ['la ', 'della '], foam_roller: ['il ', 'del '],
+    corda_doppia: ['la ', 'della '], scaletta_agilita: ['la ', 'della '], 'scaletta_agilità': ['la ', 'della '], bosu: ['il ', 'del '] };
+  var PAROLE = { trx: 'TRX', panca_scott: 'panca Scott' };
+  function testoSurrogato(ex){
+    var nativi = vfLista(vfAttrezzo(ex && ex.attrezzo), ';');
+    var surrogati = vfLista(ex && ex.surrogato_attrezzo, '+').map(vfAttrezzo);
+    var parola = function(a){ return PAROLE[a] || a.replace(/_/g, ' '); };
+    var con = surrogati.filter(function(a){ return a !== 'corpo_libero' && nativi.indexOf(a) === -1; });
+    var carichi = nativi.filter(function(a){ return CARICHI.indexOf(a) !== -1 && surrogati.indexOf(a) === -1; });
+    var via = carichi.length ? carichi : nativi.filter(function(a){ return a !== 'corpo_libero' && surrogati.indexOf(a) === -1; });
+    if(!via.length) return '';
+    var e = function(l){ return l.length > 1 ? l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1] : l[0]; };
+    var alPosto = 'al posto ' + e(via.map(function(a){ return ARTICOLI[a] ? ARTICOLI[a][1] + parola(a) : 'di ' + parola(a); }));
+    if(con.length) return 'Con ' + e(con.map(function(a){ return (ARTICOLI[a] ? ARTICOLI[a][0] : '') + parola(a); })) + ' ' + alPosto;
+    if(surrogati.indexOf('corpo_libero') !== -1) return 'A corpo libero ' + alPosto;
+    return '';
+  }
+
   // ── L'attrezzatura del profilo e le parole del catalogo (Training 560, 2 novembre 2026) ──
   // Gli slug dell'onboarding e delle Impostazioni (data-gear) non sono sempre le parole del catalogo: l'alias aggiunge
   // la parola del catalogo senza togliere lo slug (i profili vecchi hanno già «elastico»). Era GEAR_ALIASES nel
@@ -618,7 +647,7 @@ var ZTCoachRules = (function(){
   }
 
   return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals,
-    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, attrezziCasa: attrezziCasa, CARICHI: CARICHI,
+    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, attrezziCasa: attrezziCasa, testoSurrogato: testoSurrogato, CARICHI: CARICHI,
     ALIAS_ATTREZZI: ALIAS_ATTREZZI, attrezziConAlias: attrezziConAlias, attrezziInerti: attrezziInerti, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTCoachRules;
