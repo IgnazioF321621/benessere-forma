@@ -248,6 +248,19 @@ const BAND_COLORS = [BAND_FREE, 'Gialla', 'Rossa', 'Nera', 'Viola'];
 function bandPhrase(v){ return v === BAND_FREE ? 'a corpo libero' : `banda ${v}`; }
 // Etichetta compatta per badge, righe di storico e "Ultima volta".
 function bandLabel(v){ return v === BAND_FREE ? 'corpo libero' : v; }
+// Training 390 (17 novembre 2026, due segnalazioni di Ignazio: «bisogna mettere il colore degli elastici, come per le
+// trazioni: niente libbre, si parte dall'elastico più leggero, il giallo, e si sale»). Gli elastici sono gli stessi
+// delle trazioni, ma il verso cambia: quando l'elastico AIUTA (trazioni, piegamenti assistiti) il più leggero è il più
+// difficile, e «Corpo libero» è il gradino più duro; quando l'elastico è la RESISTENZA il più duro è il più difficile,
+// Gialla < Rossa < Nera < Viola (ordine confermato da Ignazio), e «Corpo libero» non è nella scala.
+const BAND_RESIST = ['Gialla', 'Rossa', 'Nera', 'Viola'];
+// La scala di un verso ('assistenza' | 'resistenza'), dal gradino più FACILE al più DURO.
+function scalaBanda(verso){ return verso === 'resistenza' ? BAND_RESIST : BAND_COLORS.slice().reverse(); }
+// Prosa per verso: l'elastico si dice col colore al maschile («elastico rosso»), la banda al femminile.
+const _ELASTICO_M = { Gialla: 'giallo', Rossa: 'rosso', Nera: 'nero', Viola: 'viola' };
+function bandPhraseV(v, verso){ return verso === 'resistenza' ? `elastico ${_ELASTICO_M[v] || v}` : bandPhrase(v); }
+// Etichetta compatta per verso (badge, storico, riepilogo)
+function bandLabelV(v, verso){ return verso === 'resistenza' ? (_ELASTICO_M[v] ? 'elastico ' + _ELASTICO_M[v] : v) : bandLabel(v); }
 // UNICO punto di verità per "questo esercizio si logga a banda". Il catalogo genera
 // varianti ("Trazioni sbarra presa neutra"): il confronto è per PREFISSO normalizzato,
 // mai per uguaglianza col nome esatto — era la regressione che tornava a ogni
@@ -271,12 +284,20 @@ function isPullUpExercise(name){
 // Picker della scala di assistenza — sorgente unica per i due punti che lo mostrano
 // (card esercizio e schermata recupero). 'Corpo libero' sta a larghezza piena SOPRA
 // la riga dei quattro colori: si legge come gradino a sé, non come un quinto colore.
-function bandPickerHTML(mb){
-  const btn = (c, full) => {
+function bandPickerHTML(mb, verso){
+  const btn = (c, full, testo) => {
     const active = ST.trainLogBandColor === c;
     return `<button type="button" onclick="ST.trainLogBandColor='${c}';renderTraining();"
-      style="${full ? 'width:100%;' : 'flex:1;'}padding:10px 6px;background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t1)'};border:1.5px solid ${active?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active?700:500};font-family:var(--font-sans);cursor:pointer;">${c}</button>`;
+      style="${full ? 'width:100%;' : 'flex:1;'}padding:10px 6px;background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t1)'};border:1.5px solid ${active?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active?700:500};font-family:var(--font-sans);cursor:pointer;">${testo || c}</button>`;
   };
+  // L'elastico come resistenza (Training 390): i quattro colori dal più leggero al più duro, senza «Corpo libero»
+  if(verso === 'resistenza') return `<div class="band-picker-resistenza" style="margin-bottom:${mb}px;">
+    <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">ELASTICO</label>
+    <div style="display:flex;gap:6px;">
+      ${BAND_RESIST.map(c => btn(c, false, _ELASTICO_M[c].charAt(0).toUpperCase() + _ELASTICO_M[c].slice(1))).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:6px;">Giallo = il più leggero · Viola = il più duro</div>
+  </div>`;
   return `<div style="margin-bottom:${mb}px;">
     <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">ASSISTENZA</label>
     ${btn(BAND_FREE, true)}

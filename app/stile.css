@@ -901,7 +901,7 @@ div.ex-media-vuoto{display:flex;align-items:center;justify-content:center;text-a
   border-bottom:1px solid var(--b1);
 }
 .train-exec-eyebrow{
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap;
   font-family:var(--font-mono);
   font-size:11px; font-weight:700;
   letter-spacing:.16em; text-transform:uppercase;
@@ -2798,8 +2798,13 @@ html.v5 .att5-sec{font-family:var(--font-mono);font-size:13px;font-weight:600;co
 html.v5 .train-exec-ex-name{padding-bottom:22px;border-radius:0 0 26px 26px;}
 html.v5 .train-exec-gif{max-width:none;max-height:58vh;border-radius:18px;}
 html.v5 .te5-numeri{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:14px;background:var(--s1);}
-html.v5 .te5-numeri b{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--t1);white-space:nowrap;}
-html.v5 .te5-numeri span{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--t2);text-align:right;}
+/* Training 390: i numeri vanno a capo invece di uscire dallo schermo («S3: elastico più duro: 170 lb…» era su una riga
+   sola); la frase della PROSSIMA (.te5-frase) è una frase, non due numeri: più piccola, a sinistra */
+html.v5 .te5-numeri{flex-wrap:wrap;}
+html.v5 .te5-numeri b{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--t1);min-width:0;max-width:100%;overflow-wrap:break-word;line-height:1.25;}
+html.v5 .te5-numeri span{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--t2);text-align:right;min-width:0;max-width:100%;overflow-wrap:break-word;}
+html.v5 .te5-numeri.te5-frase b{font-size:17px;line-height:1.35;}
+html.v5 .te5-numeri.te5-grande.te5-frase b{font-size:20px;}
 html.v5 .te5-numeri.te5-grande{padding:22px 16px;}
 html.v5 .te5-numeri.te5-grande b{font-size:30px;}
 html.v5 .te5-senza-gif{display:flex;align-items:center;gap:8px;width:100%;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--t2);}

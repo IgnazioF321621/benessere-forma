@@ -151,22 +151,22 @@ async function nuovo(o){
     const a = await nuovo();
     const c = a.card('Pallof press con elastico');
     atteso('510 · Pallof senza carico l\'ultima volta: nessun «corpo libero» per un esercizio con l\'elastico', /corpo libero/.test(c), false);
-    atteso('510 · la card dice l\'obiettivo e l\'ultima volta in secondi per lato', /Oggi S1: 30 sec per lato · ultima volta 30 sec per lato/.test(c), true);
+    atteso('510 · la card dice l\'obiettivo e l\'ultima volta in secondi per lato', /Oggi S1: scegli l'elastico · 30 sec per lato · ultima volta 30 sec per lato/.test(c), true);   // dal Training 390 l'elastico si misura a colore
     a.W.openLogModal('upperA', 'Pallof press con elastico', 1, { timedTarget: 30 });
-    atteso('510 · il registro resta su «—»: il carico non scritto non diventa uno 0', [a.ST.trainLogResist, a.doc.getElementById('tl-resist') && a.doc.getElementById('tl-resist').value], [null, '']);
-    // la persona scrive 10 lbs: le serie dopo lo ritrovano
-    a.scegli('tl-reps', '30'); a.ST.trainLogResist = 10;
+    atteso('510 · il registro non sceglie da solo: nessun elastico acceso, e il selettore è quello dei colori (Training 390)', [a.ST.trainLogBandColor, a.ST.trainLogResist, !!a.doc.querySelector('.band-picker-resistenza')], [null, null, true]);
+    // la persona sceglie l'elastico rosso: le serie dopo lo ritrovano
+    a.scegli('tl-reps', '30'); a.ST.trainLogBandColor = 'Rossa';
     await a.W.saveTrainingSet(); await dormi();
     a.W.skipCountdown();
     a.W.openLogModal('upperA', 'Pallof press con elastico', 2, { timedTarget: 35 });
-    atteso('510 · serie 2: il registro riprende i 10 lbs e la durata scelta', [a.ST.trainLogResist, a.doc.getElementById('tl-reps').value], [10, '35']);
+    atteso('510 · serie 2: il registro riprende l\'elastico rosso e la durata scelta', [a.ST.trainLogBandColor, a.doc.getElementById('tl-reps').value], ['Rossa', '35']);
     // un esercizio a corpo libero col carico mai scritto resta «corpo libero», come prima
     atteso('510 · Calf raise (corpo libero, carico mai scritto): «corpo libero» come prima', /Oggi S1: corpo libero · 12 reps per lato · RIR 2/.test(a.card('Calf raise una gamba')), true);
   }
   {
     // la volta dopo, col carico scritto: la tenuta compila il carico come le ripetizioni
     const a = await nuovo({ pallof12: '10' });
-    atteso('510 · Pallof con 10 lbs l\'ultima volta: la card lo dice', /Oggi S1: 10 lbs · 30 sec per lato · ultima volta 30 sec per lato · 10 lbs/.test(a.card('Pallof press con elastico')), true);
+    atteso('510 · Pallof con 10 lbs l\'ultima volta (serie di prima del 390, in numeri): la card la dice com\'era e chiede l\'elastico', /Oggi S1: scegli l'elastico · 30 sec per lato · ultima volta 30 sec per lato · 10 lbs/.test(a.card('Pallof press con elastico')), true);
     // come nell'app: «▶ Avvia», il tempo, «Fine serie» → registro con la durata del picker
     a.W.openTrainExec('upperA', 'Pallof press con elastico', 1);
     a.W.execTimerSetTarget(30);
@@ -174,8 +174,7 @@ async function nuovo(o){
     a.W.execTimerStop();
     a.ST.trainExecOpen.isoPhase = 'B';
     a.W.trainExecFinishSet();
-    atteso('510 · tenuta, prima serie: il registro apre con 10 lbs (prima «—») e 30 secondi', [a.ST.trainLogResist, a.doc.getElementById('tl-reps') && a.doc.getElementById('tl-reps').value], [10, '30']);
-    atteso('510 · …e la tendina del carico lo mostra', a.doc.getElementById('tl-resist') && a.doc.getElementById('tl-resist').value, '10');
+    atteso('510 · tenuta, prima serie: il registro apre coi 30 secondi e il selettore dei colori (i 10 lbs di prima non diventano un colore)', [a.ST.trainLogBandColor, a.doc.getElementById('tl-reps') && a.doc.getElementById('tl-reps').value, !!a.doc.querySelector('.band-picker-resistenza')], [null, '30', true]);
   }
   {
     // revisione della Regia: chi è a corpo libero lo è anche con un appoggio (righe vere del 28 ottobre)

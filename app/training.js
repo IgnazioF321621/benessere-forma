@@ -76,6 +76,37 @@ const _ATTREZZI_CARICO = ZTCoachRules.CARICHI.map(a => a.replace(/_/g, ' '));
 function _exACorpoLibero(ex){
   return !_paroleEq(ex).some(a => _ATTREZZI_CARICO.includes(a));
 }
+// Chi si misura a colore di banda, e in che verso (Training 390, 17 novembre 2026). Punto unico, come isPullUpExercise
+// per le trazioni: nessun confronto sul nome.
+//   trazioni (isPullUpExercise)                                   → 'assistenza', come sempre
+//   l'elastico è l'unico carico nell'attrezzo della seduta (`eq`: nativo o surrogato; «elastico+panca» sì, la barra è
+//   l'accessorio degli elastici; «elastico+manubri» no), o, senza attrezzo scritto, la via del catalogo è «elastico più duro»
+//     · via del catalogo «meno assistenza»                        → 'assistenza' (piegamenti assistiti)
+//     · altrimenti                                                → 'resistenza'
+//   tutto il resto                                                → null: carico in numeri, come prima
+// La via si legge prima dal catalogo di oggi e poi dalla scheda: il verso segue una correzione del foglio senza
+// rigenerare la scheda (EX378 aveva «elastico più duro»).
+function bandaDi(exName, sessionId, ex0){
+  if(isPullUpExercise(exName)) return 'assistenza';
+  const ex = ex0 || (sessionId ? findExercise(exName, sessionId) : null) || ((findExInAllSessions(exName) || {}).ex);
+  if(!ex) return null;
+  const parole = _paroleEq(ex);
+  if(parole.some(a => a !== 'elastico' && a !== 'barra' && _ATTREZZI_CARICO.includes(a))) return null;
+  const info = (ex.codice && ST.catalogInfoByCodice instanceof Map) ? ST.catalogInfoByCodice.get(ex.codice) : null;
+  const via = (info && info.progressione) || ex.progressione || null;
+  const elastico = parole.includes('elastico');
+  if(elastico && via === 'meno assistenza') return 'assistenza';
+  // con un attrezzo scritto serve l'elastico (o la sua barra); la sola via «elastico più duro» vale per le schede
+  // vecchie senza attrezzo (revisione: «Rematore manubri» senza eq, coi manubri, avrebbe potuto scrivere solo un colore)
+  if(elastico || parole.includes('barra')) return 'resistenza';
+  return (!parole.length && via === 'elastico più duro') ? 'resistenza' : null;
+}
+// La banda scritta in una serie (band_color, o il colore finito in resistance), o null
+function _bandaDellaSerie(l){
+  if(!l) return null;
+  if(l.band_color && BAND_COLORS.includes(l.band_color)) return l.band_color;
+  return BAND_COLORS.includes(String(l.resistance || '')) ? String(l.resistance) : null;
+}
 function _paroleEq(ex){ return String((ex && ex.eq) || '').toLowerCase().split(/[;+,]/).map(a => a.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean); }
 // La via di progressione per l'attrezzo che la persona ha in mano (Training 550, 1 novembre 2026): il catalogo scrive la
 // via della riga col suo attrezzo nativo, ma a casa la stessa riga si fa spesso col surrogato (`eq` della scheda).
@@ -725,7 +756,8 @@ function getProgressionLive(exName, sessionId){
 function getProgressionSuggestion(exName, sessionId){
   const ex = findExercise(exName, sessionId);
   if(!ex) return '';
-  const isPullUp = isPullUpExercise(exName);
+  const versoBanda = bandaDi(exName, sessionId, ex);
+  const isPullUp = !!versoBanda;
   // Se c'è già una serie loggata oggi → niente fallback: la PROSSIMA è dominio
   // di computeNextSetSuggestion (vedi getProgressionLive).
   const today = todayKey();
@@ -761,7 +793,7 @@ function getProgressionSuggestion(exName, sessionId){
   const firstNum = (String(ex.reps || '').match(/(\d+)/) || [])[1];
   const startN = parsed ? parsed.min : (firstNum ? parseInt(firstNum, 10) : 8);
   const perLatoTxt = _contaPerLato(ex, parsed) ? ' per lato' : '';
-  if(isPullUp) return `💡 Inizia con ${startN} reps · banda Viola`;
+  if(isPullUp) return `💡 Inizia con ${startN} ${parsed && parsed.kind === 'seconds' ? 'sec' : 'reps'}${versoBanda === 'resistenza' ? perLatoTxt : ''} · ${bandPhraseV(scalaBanda(versoBanda)[0], versoBanda)}`;
   if(parsed && parsed.kind === 'seconds') return `💡 Inizia con ${startN} sec di tenuta${perLatoTxt}`;
   return `💡 Inizia con ${startN} reps${perLatoTxt}`;
 }
@@ -1129,9 +1161,24 @@ function progMisura(exName, logs){
   if(isPullUpExercise(exName)){
     // la scala: Viola (più aiuto) = 0 … Corpo libero (nessun aiuto) = 4; salire = banda più dura
     const idx = (l) => { const b = (l.band_color && BAND_COLORS.includes(l.band_color)) ? l.band_color : (BAND_COLORS.includes(String(l.resistance || '')) ? String(l.resistance) : null); return b ? BAND_COLORS.indexOf(b) : -1; };
-    return { tipo:'banda', unit:'', label:'ASSISTENZA', max: BAND_COLORS.length - 1,
+    return { tipo:'banda', verso:'assistenza', unit:'', label:'ASSISTENZA', max: BAND_COLORS.length - 1,
       valore: (l) => { const i = idx(l); return i < 0 ? 0 : (BAND_COLORS.length - 1 - i); },
       testo: (v) => bandLabel(BAND_COLORS[BAND_COLORS.length - 1 - Math.max(0, Math.min(BAND_COLORS.length - 1, Math.round(v)))]) };
+  }
+  // Gli altri esercizi con l'elastico (Training 390): a banda da quando una serie ha il colore. Le serie di prima,
+  // in numeri, restano storiche e non si convertono: finché non c'è una serie a colore la misura è quella di prima
+  // (carico), poi contano solo le serie a colore (`filtra`: chi confronta o disegna le passa da _serieDellaMisura).
+  // fuori dalla scheda (i complementari ruotano a ogni blocco) il verso non si sa più: se le serie hanno un colore
+  // e non è una trazione, era l'elastico come resistenza, salvo un «Corpo libero» scritto (assistenza)
+  const conColore = (logs || []).filter(l => _bandaDellaSerie(l));
+  const verso = bandaDi(exName) || (conColore.length ? (conColore.some(l => _bandaDellaSerie(l) === BAND_FREE) ? 'assistenza' : 'resistenza') : null);
+  if(verso){
+    const scala = scalaBanda(verso);
+    const pos = (l) => { const b = _bandaDellaSerie(l); return b ? scala.indexOf(b) : -1; };
+    if((logs || []).some(l => pos(l) >= 0)) return { tipo:'banda', verso, unit:'', label: verso === 'resistenza' ? 'ELASTICO' : 'ASSISTENZA', max: scala.length - 1,
+      filtra: (l) => pos(l) >= 0,
+      valore: (l) => Math.max(0, pos(l)),
+      testo: (v) => bandLabelV(scala[Math.max(0, Math.min(scala.length - 1, Math.round(v)))], verso) };
   }
   const found = findExInAllSessions(exName);
   const pr = (found && found.ex && found.ex.reps) ? parseRepsRange(found.ex.reps) : null;
@@ -1139,6 +1186,8 @@ function progMisura(exName, logs){
   if(!(logs || []).some(l => (parseFloat(l.resistance) || 0) > 0)) return { tipo:'reps', unit:'reps', label:'RIPETIZIONI', valore: (l) => Number(l.reps) || 0, testo: (v) => String(v) };
   return { tipo:'carico', unit: unitLbl, label:'CARICO', valore: (l) => parseFloat(l.resistance) || 0, testo: (v) => String(v) };
 }
+// Le serie che contano per la misura: tutte, salvo negli esercizi passati dai numeri al colore dell'elastico (Training 390)
+function _serieDellaMisura(misura, logs){ return (misura && misura.filtra) ? (logs || []).filter(misura.filtra) : (logs || []); }
 // Il passo «bello» dell'asse: 2, 5, 10 o 50 a seconda della grandezza.
 function _progPasso(maxV){ return maxV <= 10 ? 2 : maxV <= 40 ? 5 : maxV <= 150 ? 10 : 50; }
 
@@ -1211,7 +1260,7 @@ function editLogRow(id){
   const log = (ST.trainDayLogs || []).find(l => l.id === id);
   if(!log) return;
   // BLOCCO 3 — Trazioni: il valore editabile è il colore banda (band_color), non resistance numerica.
-  const isPullUp = isPullUpExercise(log.exercise_name);
+  const isPullUp = isPullUpExercise(log.exercise_name) || !!_bandaDellaSerie(log);   // a colore anche le serie con l'elastico (Training 390)
   ST.trainEditLogRow = {
     id,
     reps: log.reps != null ? String(log.reps) : '',
@@ -1254,7 +1303,7 @@ async function confirmEditLogRow(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainEditLogRow = null; renderTraining(); return; }
   // Trova il log originale per riconoscere le trazioni (il carico e' il colore della banda)
   const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
-  const isPullUp = orig && isPullUpExercise(orig.exercise_name);
+  const isPullUp = orig && (isPullUpExercise(orig.exercise_name) || !!_bandaDellaSerie(orig));
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   const resistanceText = isPullUp ? null : (resistance || null);
@@ -2672,42 +2721,57 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // catalogo. Senza colonna: carico per le ripetizioni, tenuta più lunga per le tenute.
   const via = _viaPerAttrezzo(_exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico'), exData, parseFloat(resistance) || 0);
 
-  if(isPullUpExercise(exName)){
-    // Ramo TRAZIONI — la "resistenza" è il gradino della scala di assistenza.
-    // BAND_COLORS = ['Corpo libero','Gialla','Rossa','Nera','Viola']: idx 0 = più dura
-    // (nessun aiuto), ultimo idx = più facile (più aiuto). Progredire = scendere di idx.
-    // Corpo libero è un valore reale della scala: da Gialla la "banda più dura" ci
-    // arriva da sola, senza il caso speciale "prova la trazione libera" di prima.
-    const cur = (bandColor && BAND_COLORS.includes(bandColor)) ? bandColor : null;
-    const curIdx = cur ? BAND_COLORS.indexOf(cur) : -1;
-    const harder = (curIdx > 0) ? BAND_COLORS[curIdx-1] : null;                       // verso Corpo libero
-    const easier = (curIdx >= 0 && curIdx < BAND_COLORS.length-1) ? BAND_COLORS[curIdx+1] : null;
-    const bandTxt = cur ? bandPhrase(cur) : 'stessa banda';
+  const versoBanda = bandaDi(exName, sessionId, exData);
+  if(versoBanda){
+    // Ramo A BANDA — trazioni (com'era) e, dal Training 390, ogni esercizio fatto con l'elastico. Il gradino è una
+    // posizione nella scala del verso, dal più facile al più duro (scalaBanda):
+    //   assistenza  Viola · Nera · Rossa · Gialla · Corpo libero   (meno aiuto = più dura)
+    //   resistenza  Gialla · Rossa · Nera · Viola                  (elastico più duro = più dura)
+    // Progredire = salire di posizione. In cima alla scala non c'è niente di più duro: si sale di ripetizioni, oltre
+    // il tetto. Con l'elastico come resistenza e nessun colore ancora scritto (le serie di prima erano in numeri) il
+    // colore lo sceglie la persona: «scegli l'elastico».
+    const R = versoBanda === 'resistenza';
+    const scala = scalaBanda(versoBanda);
+    const cur = (bandColor && scala.includes(bandColor)) ? bandColor : null;
+    const curIdx = cur ? scala.indexOf(cur) : -1;
+    const inCima = curIdx === scala.length - 1;
+    const harder = (curIdx >= 0 && !inCima) ? scala[curIdx + 1] : null;
+    const easier = (curIdx > 0) ? scala[curIdx - 1] : null;
+    const frase = (v) => bandPhraseV(v, versoBanda);
+    const pullUp = isPullUpExercise(exName);
+    const u = pullUp ? 'reps' : unitLbl;
+    const step = pullUp ? 1 : (isTimed ? 5 : 1);   // le trazioni come prima: una ripetizione
+    // la via del catalogo (Training 320) resta: «più ripetizioni» e «tenuta più lunga» non cambiano elastico
+    const restaSulColore = R && (via === 'più ripetizioni' || via === 'tenuta più lunga');
+    const bandTxt = cur ? frase(cur) : (R ? 'scegli l\'elastico' : 'stessa banda');
     // 0) prima serie di oggi (Training 440): la più forte dell'ultima seduta, uguale (serieDaRipetere)
-    if(primaSerie && repsDone >= repsMin) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `${repsDone} reps`);
+    if(primaSerie && repsDone >= repsMin) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `${repsDone} ${u}`);
     // 1) cedimento (RIR 0) ma reps nel range → stesso gradino, -1 rep
     //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
     if(rirVal === 0 && repsDone >= repsMin){
-      if(targetRIR === 0) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `mantieni ${repsDone} reps`);
-      return fine({ bandColor: cur, reps: clampReps(repsDone - 1) }, bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
+      if(targetRIR === 0) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `mantieni ${repsDone} ${u}`);
+      return fine({ bandColor: cur, reps: clampReps(repsDone - step) }, bandTxt, `scendi a ${clampReps(repsDone - step)} ${u}`);
     }
     // 1b) meno margine dell'obiettivo (RIR fatto < RIR obiettivo) ma nel range → stesso gradino, stesse
     //     ripetizioni: niente passo avanti né banda più dura (Training 460)
-    if(rirVal != null && rirVal < targetRIR && repsDone >= repsMin) return fine({ bandColor: cur, reps: clampReps(repsDone) }, bandTxt, `resta a ${clampReps(repsDone)} reps`);
-    // 2) tetto + RIR ≥ target → un gradino più duro.
-    //    Su Corpo libero (idx 0) non esiste niente di più duro: si sale di reps,
-    //    oltre il tetto del range, perché la banda non è più una leva disponibile.
+    if(rirVal != null && rirVal < targetRIR && repsDone >= repsMin) return fine({ bandColor: cur, reps: clampReps(repsDone) }, bandTxt, `resta a ${clampReps(repsDone)} ${u}`);
+    // 2) tetto + RIR ≥ target → un gradino più duro. In cima alla scala si sale di ripetizioni, oltre il tetto.
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
-      if(curIdx === 0) return fine({ bandColor: cur, reps: repsDone + 1 }, bandTxt, `sali a ${repsDone + 1} reps`);
-      return fine({ bandColor: harder || 'Gialla', reps: repsMin }, `${harder ? bandPhrase(harder) : 'banda Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
+      if(inCima || restaSulColore) return fine({ bandColor: cur, reps: repsDone + step }, bandTxt, restaSulColore ? via : null, `sali a ${repsDone + step} ${u}`);
+      if(R && !cur) return fine({ bandColor: null, reps: clampReps(repsDone) }, bandTxt, `${clampReps(repsDone)} ${u}`);
+      const su = harder || 'Gialla';
+      return fine({ bandColor: su, reps: repsMin }, `${frase(su)} (${R ? 'più duro' : 'più dura'})`, `riparti da ${repsMin} ${u}`);
     }
-    // 3) sotto range → un gradino più facile. Su Viola (ultimo idx) non esiste
-    //    niente di più facile: si resta su Viola.
-    if(repsDone < repsMin) return fine({ bandColor: easier || 'Viola', reps: repsMin }, `${bandPhrase(easier || 'Viola')} (più aiuto)`, `punta a ${repsMin} reps`);
+    // 3) sotto range → un gradino più facile. In fondo alla scala non c'è niente di più facile: si resta lì.
+    if(repsDone < repsMin){
+      if(R && !cur) return fine({ bandColor: null, reps: repsMin }, bandTxt, `punta a ${repsMin} ${u}`);
+      const giu = easier || scala[0];
+      return fine({ bandColor: giu, reps: repsMin }, (giu === cur) ? frase(giu) : `${frase(giu)} (${R ? 'più leggero' : 'più aiuto'})`, `punta a ${repsMin} ${u}`);
+    }
     // 4) RIR > target (facile) → stesso gradino, alza reps verso il tetto
-    if(rirVal != null && rirVal > targetRIR) return fine({ bandColor: cur, reps: clampReps(repsDone + 1) }, bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
+    if(rirVal != null && rirVal > targetRIR) return fine({ bandColor: cur, reps: clampReps(repsDone + step) }, bandTxt, `sali a ${clampReps(repsDone + step)} ${u}`);
     // 5) default (RIR = target o non riportato) → stesso gradino, +1 rep
-    return fine({ bandColor: cur, reps: clampReps(repsDone + 1) }, bandTxt, `${clampReps(repsDone + 1)} reps`);
+    return fine({ bandColor: cur, reps: clampReps(repsDone + step) }, bandTxt, `${clampReps(repsDone + step)} ${u}`);
   }
 
   // Ramo ELASTICI / corpo libero — resistenza nell'unità dell'utente
@@ -2787,7 +2851,9 @@ function serieDaRipetere(exName, sessionId){
   const exData = findExercise(exName, sessionId);
   const parsed = exData ? parseRepsRange(exData.reps) : null;
   const nelRange = parsed ? tutte.filter(l => (Number(l.reps) || 0) >= parsed.min) : [];
-  return bestSetOfDay(nelRange.length ? nelRange : tutte, progMisura(exName, tutte)) || last;
+  const mis = progMisura(exName, tutte);
+  const conta = _serieDellaMisura(mis, nelRange.length ? nelRange : tutte);
+  return bestSetOfDay(conta.length ? conta : (nelRange.length ? nelRange : tutte), mis) || last;
 }
 
 // ── L'obiettivo di oggi parte dall'ultima seduta (Training 040, 13 ottobre 2026; Training 440) ──
@@ -2805,9 +2871,12 @@ function obiettivoPrimaSerie(exName, sessionId){
   if(!exData || !sess || !last) return null;
   const parsed = parseRepsRange(exData.reps);
   if(!parsed || parsed.min === parsed.max) return null;
-  const isPullUp = isPullUpExercise(exName);
-  const lastBand = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color
-    : (isPullUp && BAND_COLORS.includes(String(last.resistance || ''))) ? String(last.resistance) : null;
+  // a banda: trazioni e, dal Training 390, gli esercizi con l'elastico (bandaDi dice il verso)
+  const versoBanda = bandaDi(exName, sessionId, exData);
+  const isPullUp = !!versoBanda;
+  const scalaB = versoBanda ? scalaBanda(versoBanda) : [];
+  const lastBand = versoBanda ? (scalaB.includes(_bandaDellaSerie(last)) ? _bandaDellaSerie(last) : null)
+    : ((last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : null);
   const o = computeNextSetSuggestion({ sessionId, exName, setNum: 0, reps: last.reps,
     resistance: isPullUp ? '' : last.resistance, rir: last.rir_actual, exData, sess, bandColor: lastBand, struttura: true, primaSerie: true });
   if(!o) return null;
@@ -2817,7 +2886,7 @@ function obiettivoPrimaSerie(exName, sessionId){
   const lastV = parseFloat(last.resistance) || 0;
   // un carico mai scritto resta da scrivere, non diventa «corpo libero» (Training 510)
   const caricoNoto = !(last.resistance == null || String(last.resistance).trim() === '') || _exACorpoLibero(exData);
-  const bandaFacile = () => lastBand ? BAND_COLORS[Math.min(BAND_COLORS.length - 1, BAND_COLORS.indexOf(lastBand) + 1)] : null;
+  const bandaFacile = () => lastBand ? scalaB[Math.max(0, scalaB.indexOf(lastBand) - 1)] : null;   // un gradino più facile nel suo verso
   // la settimana leggera riduce il carico una volta: se l'ultima seduta di questo esercizio è già dentro la settimana
   // leggera, quel carico è già il 90% e si ripete (revisione del 360: un esercizio due volte in 7 giorni andava all'81%)
   const sr0 = getSoftReturn();
@@ -2830,7 +2899,7 @@ function obiettivoPrimaSerie(exName, sessionId){
     if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = caricoNoto ? (lastV > 0 ? softReturnLoad(lastV) : 0) : null;
   }
   if(o.nota){
-    const carico = isPullUp ? (o.bandColor ? bandPhrase(o.bandColor) : 'banda più facile')
+    const carico = isPullUp ? (o.bandColor ? bandPhraseV(o.bandColor, versoBanda) : (versoBanda === 'resistenza' ? 'elastico più leggero' : 'banda più facile'))
       : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : o.resistance == null ? '' : 'corpo libero');
     o.testo = `S1: ${[carico, `${o.reps} ${unitLbl}`, parsed.kind === 'seconds' ? null : `RIR ${o.rir}`].filter(Boolean).join(' · ')} (${o.nota})`;
   }
@@ -2848,13 +2917,18 @@ function _prossimaDaCompilare(exName, sessionId, primaSerie){
 // Gli stessi numeri di sempre (obiettivoPrimaSerie, serieDaRipetere): qui si decide solo come scriverli.
 // → { grande: '40 lbs × 10', piccolo: 'come l'ultima volta' | '+5 lbs rispetto all'ultima volta' | 'si parte da qui',
 //     testo: la riga dell'elenco, ultima: 'Ultima volta · 40 lbs × 10 · RIR 2' quando i numeri cambiano (si legge al tocco), uguale }
-function _rigaNumeriTesto(o, last, ex, isPullUp){
+function _rigaNumeriTesto(o, last, ex, versoBanda){
+  // versoBanda: 'assistenza' | 'resistenza' | null/false (vero, come prima, vale «assistenza»: le trazioni)
+  if(versoBanda === true) versoBanda = 'assistenza';
+  const isPullUp = !!versoBanda;
+  const R = versoBanda === 'resistenza';
+  const scalaB = versoBanda ? scalaBanda(versoBanda) : [];
   const parsed = ex ? parseRepsRange(ex.reps) : null;
   const timed = !!(parsed && parsed.kind === 'seconds');
   const perLato = (ex && _contaPerLato(ex, parsed)) ? ' per lato' : '';
   const unit = (ST.profile && ST.profile.unit) || 'lbs';
   const num = (v) => String(v).replace('.', ',');
-  const carico = (res, band) => isPullUp ? (band ? bandPhrase(band) : '') : caricoTesto(res);
+  const carico = (res, band) => isPullUp ? (band ? bandPhraseV(band, versoBanda) : '') : caricoTesto(res);
   const coppia = (res, band, reps) => {
     const c = carico(res, band);
     if(c) return `${c} × ${reps}${timed ? ' sec' : ''}${perLato}`;
@@ -2863,34 +2937,37 @@ function _rigaNumeriTesto(o, last, ex, isPullUp){
   if(!last){
     const primo = (String((ex && ex.reps) || '').match(/(\d+)/) || [])[1];
     const n = parsed ? parsed.min : (primo ? parseInt(primo, 10) : 8);
-    const grande = isPullUp ? `${bandPhrase('Viola')} × ${n}` : (timed ? `${n} sec di tenuta${perLato}` : `${n} ripetizioni${perLato}`);
+    const grande = isPullUp ? `${bandPhraseV(scalaB[0], versoBanda)} × ${n}${timed ? ' sec' : ''}` : (timed ? `${n} sec di tenuta${perLato}` : `${n} ripetizioni${perLato}`);
     return { grande, piccolo:'si parte da qui', testo:`Si parte da ${grande}`, ultima:null, uguale:false };
   }
-  const lastBand = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color
-    : (isPullUp && BAND_COLORS.includes(String(last.resistance || ''))) ? String(last.resistance) : null;
+  const lastBand = isPullUp ? (scalaB.includes(_bandaDellaSerie(last)) ? _bandaDellaSerie(last) : null)
+    : ((last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : null);
   const lastRes = isPullUp ? null : last.resistance;
-  const ultima = coppia(lastRes, lastBand, last.reps);
+  // con l'elastico, l'ultima volta scritta in numeri (prima del Training 390) si legge com'era, da storica
+  const ultima = (R && !lastBand && caricoTesto(last.resistance)) ? `${caricoTesto(last.resistance)} × ${last.reps}${timed ? ' sec' : ''}${perLato}` : coppia(lastRes, lastBand, last.reps);
   const ultimaRir = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
   if(!o) return { grande:ultima, piccolo:'l\'ultima volta', testo:`L'ultima volta · ${ultima}${ultimaRir}`, ultima:null, uguale:false };
   const oggi = coppia(isPullUp ? null : o.resistance, o.bandColor, o.reps);
   const diff = [];
   if(isPullUp){
-    if(o.bandColor && lastBand && o.bandColor !== lastBand) diff.push(BAND_COLORS.indexOf(o.bandColor) < BAND_COLORS.indexOf(lastBand) ? 'banda più dura' : 'banda più facile');
+    if(o.bandColor && lastBand && o.bandColor !== lastBand) diff.push(scalaB.indexOf(o.bandColor) > scalaB.indexOf(lastBand) ? (R ? 'elastico più duro' : 'banda più dura') : (R ? 'elastico più leggero' : 'banda più facile'));
+
   } else {
     const a = parseFloat(o.resistance), b = parseFloat(lastRes);
     if(o.resistance != null && !isNaN(a) && !isNaN(b) && a !== b) diff.push(`${a > b ? '+' : '−'}${num(Math.abs(a - b))} ${unit}`);
   }
   const dr = (Number(o.reps) || 0) - (Number(last.reps) || 0);
   if(dr) diff.push(`${dr > 0 ? '+' : '−'}${Math.abs(dr)} ${timed ? 'sec' : (Math.abs(dr) === 1 ? 'ripetizione' : 'ripetizioni')}`);
-  const uguale = diff.length === 0;
-  const piccolo = uguale ? 'come l\'ultima volta' : `${o.nota ? o.nota + ', ' : ''}${diff.join(', ')} rispetto all'ultima volta`;
+  const daColore = R && !o.bandColor && !lastBand;   // il primo giorno a colore dopo le serie in numeri (Training 390)
+  const uguale = diff.length === 0 && !daColore;
+  const piccolo = daColore ? 'da oggi a colore: scegli l\'elastico' : uguale ? 'come l\'ultima volta' : `${o.nota ? o.nota + ', ' : ''}${diff.join(', ')} rispetto all'ultima volta`;
   return { grande:oggi, piccolo, testo: uguale ? `Come l'ultima volta · ${oggi}` : `${oggi} · ${piccolo}`,
     ultima: uguale ? null : `Ultima volta · ${ultima}${ultimaRir}`, uguale };
 }
 function rigaNumeriV5(exName, sessionId){
   const ex = findExercise(exName, sessionId);
   if(!ex) return null;
-  return _rigaNumeriTesto(obiettivoPrimaSerie(exName, sessionId), serieDaRipetere(exName, sessionId), ex, isPullUpExercise(exName));
+  return _rigaNumeriTesto(obiettivoPrimaSerie(exName, sessionId), serieDaRipetere(exName, sessionId), ex, bandaDi(exName, sessionId, ex));
 }
 // La riga nell'elenco della seduta: ferma se i numeri sono quelli dell'ultima volta, un tasto (‹›) che apre i numeri
 // dell'ultima volta quando cambiano (scelta di Ignazio del 30/10: solo la differenza, il resto al tocco).
@@ -2928,6 +3005,7 @@ const SENSAZIONI = [['facile', 'Facile'], ['giusta', 'Giusta'], ['dura', 'Dura']
 function _confrontaSerie(exName, a, b, misura){
   if(!a || !b) return 0;
   const m = misura || progMisura(exName, [a, b]);
+  if(m.filtra && !(m.filtra(a) && m.filtra(b))) return 0;   // numeri contro colore: non si confrontano (Training 390)
   const va = m.valore(a), vb = m.valore(b);
   if(va !== vb) return va > vb ? 1 : -1;
   const ra = Number(a.reps) || 0, rb = Number(b.reps) || 0;
@@ -2965,9 +3043,12 @@ async function apriRiepilogoSessione(sid, wid){
   }
   const righe = esercizi.map(e => {
     const oggi = oggiPer[e.name] || [];
-    const prec = storico.filter(l => l.exercise_code === e.codice);
-    const misura = progMisura(e.name, [...oggi, ...prec]);
-    const bestOggi = bestSetOfDay(oggi, misura);
+    const precTutte = storico.filter(l => l.exercise_code === e.codice);
+    const oggiTutte = oggiPer[e.name] || [];
+    const misura = progMisura(e.name, [...oggiTutte, ...storico.filter(l => l.exercise_code === e.codice)]);
+    // passati dai numeri al colore dell'elastico (Training 390): il confronto è solo fra serie a colore
+    const prec = _serieDellaMisura(misura, precTutte);
+    const bestOggi = bestSetOfDay(_serieDellaMisura(misura, oggi), misura);
     const ultimaData = prec.length ? prec.map(l => l.date).sort().pop() : null;
     const bestPrima = ultimaData ? bestSetOfDay(prec.filter(l => l.date === ultimaData), misura) : null;
     const bestSempre = prec.length ? bestSetOfDay(prec, misura) : null;
@@ -3072,14 +3153,15 @@ async function saveTrainingSet(){
   }
   // BLOCCO 3 — Trazioni: resistance NULL nel DB, band_color = colore scelto; ST.trainLoggedSets memorizza il colore
   // come stringa nel campo resistance (compat con getLastLoggedSetLabel + render badge).
-  const isPullUp = isPullUpExercise(form.exName);
-  const bandColor = isPullUp ? (BAND_COLORS.includes(ST.trainLogBandColor) ? ST.trainLogBandColor : null) : null;
+  const versoBanda = bandaDi(form.exName, form.sessionId);   // trazioni ed esercizi con l'elastico (Training 390)
+  const isPullUp = !!versoBanda;
+  const bandColor = isPullUp ? (scalaBanda(versoBanda).includes(ST.trainLogBandColor) ? ST.trainLogBandColor : null) : null;
   const resistance = isPullUp
     ? (bandColor || '')
     : ((ST.trainLogResist != null) ? String(ST.trainLogResist) : '');
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
-  if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
+  if(isPullUp && !bandColor){ showToast(versoBanda === 'resistenza' ? 'Scegli l\'elastico' : 'Scegli il livello di assistenza','⚠️'); return; }
   ST.trainSaving = true;
   renderTraining();
   // Una riga sola, in training_logs, con l'id scelto dal telefono e il codice esercizio
@@ -4099,8 +4181,8 @@ function renderTraining(){
           if(ST.editLogKey === k){
             const dr = ST.editLogDraft || {};
             // BLOCCO 3 — Trazioni: edit inline mostra select COLORE al posto di input lbs
-            if(isPullUpExercise(e.name)){
-              const colorOpts = BAND_COLORS.map(c =>
+            if(isPullUpExercise(e.name) || _bandaDellaSerie(d)){
+              const colorOpts = (bandaDi(e.name, sel, e) === 'resistenza' ? BAND_RESIST : BAND_COLORS).map(c =>
                 `<option value="${c}" ${dr.resistance === c ? 'selected' : ''}>${c}</option>`
               ).join('');
               return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);border:1.5px solid var(--acc);padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
@@ -4149,7 +4231,7 @@ function renderTraining(){
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
             ${_tlRigaRepsRir(isTimed, parsedReps, _exPerLato(e, parsedReps), _contaPerLato(e, parsedReps))}
-            ${isPullUpExercise(e.name) ? bandPickerHTML(6) : `
+            ${bandaDi(e.name, sel, e) ? bandPickerHTML(6, bandaDi(e.name, sel, e)) : `
               <div style="margin-bottom:6px;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
                 <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);"
@@ -4230,8 +4312,8 @@ function renderTraining(){
                 <span class="ex-rest">rec ${restCompact}</span>
               </div>
             </div>
-            ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
-            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name, sel)} · RIR +${ZTQuadro.RIENTRO.RIR_PIU}</div>` : ''}
+            ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${bandaDi(e.name, sel, e) ? (bandaDi(e.name, sel, e) === 'resistenza' ? 'elastico un livello più leggero' : 'banda un livello più facile') : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
+            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${bandaDi(e.name, sel, e) ? (bandaDi(e.name, sel, e) === 'resistenza' ? 'elastico un livello più leggero' : 'banda un livello più facile') : _softReturnRowText(e.name, sel)} · RIR +${ZTQuadro.RIENTRO.RIR_PIU}</div>` : ''}
             ${e.oggiAlPostoDi ? `<div class="ex-suggestion" style="color:var(--t3);">🔁 OGGI AL POSTO DI ${esc(e.oggiAlPostoDi.name)}${loggedKeys.length === 0 ? ` · <a href="#" onclick="event.preventDefault();event.stopPropagation();annullaCambioOggi('${sel}','${safeName}')" style="color:var(--acc);font-weight:700;">torna a quello ›</a>` : ''}</div>` : ''}
             ${suggestion ? ((v5Seduta && loggedKeys.length === 0) ? _rigaNumeriHTML(e.name, sel) : `<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`) : ''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
@@ -4797,12 +4879,13 @@ function renderTraining(){
         <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Registra le serie durante l'allenamento: il grafico si costruisce da lì</div>
       </div>`;
     } else {
-      const byDate = ST.trainProgLogs.reduce((acc,log)=>{
+      // La misura dell'esercizio (Training 100): carico, banda, secondi o ripetizioni. Passato dai numeri al colore
+      // dell'elastico (Training 390), il grafico è delle sole serie a colore: quelle in numeri restano nel dettaglio del giorno
+      const misura = progMisura(selEx, ST.trainProgLogs);
+      const byDate = _serieDellaMisura(misura, ST.trainProgLogs).reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
       }, {});
       const dates = Object.keys(byDate).sort();
-      // La misura dell'esercizio (Training 100): carico, banda, secondi o ripetizioni
-      const misura = progMisura(selEx, ST.trainProgLogs);
       const points = dates.map(date => {
         const best = bestSetOfDay(byDate[date], misura);
         return {
@@ -4940,7 +5023,7 @@ function renderTraining(){
             <strong style="font-size:17px;display:block;line-height:1.25;">${nomeCortoConTag(ai.exName)}${attrezzoTagHtml(ai.eq)}</strong>
             ${ai.sessionLabel ? `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">${ai.sessionLabel}</div>` : ''}
             ${ai.isSurrogato ? (ai.rigaSurrogato ? _rigaSurrogatoHTML(ai.rigaSurrogato, 13) : `<div class="ex-surrogato-note" style="margin-top:6px;">⚠ Versione adattata · ${(ai.surrogatoEq||'').toUpperCase()}</div>`) : ''}
-            ${(document.documentElement.classList.contains('v5') && !isPullUpExercise(ai.exName)) ? `<div class="ex5-nota-carico">Carichi in ${(ST.profile && ST.profile.unit) || 'lbs'} indicativi · scarto ±15% per gli elastici a tubo</div>` : ''}
+            ${(document.documentElement.classList.contains('v5') && !bandaDi(ai.exName)) ? `<div class="ex5-nota-carico">Carichi in ${(ST.profile && ST.profile.unit) || 'lbs'} indicativi · scarto ±15% per gli elastici a tubo</div>` : ''}
           </div>
           <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
@@ -5103,7 +5186,7 @@ function renderTraining(){
                 const unitLbl2 = (ST.profile && ST.profile.unit) || 'lbs';
                 const parsedRepsM = ex?.reps ? parseRepsRange(ex.reps) : null;
                 const isTimedM = (parsedRepsM && parsedRepsM.kind === 'seconds') || !!ex?.isTimed;
-                const isPullUpM = isPullUpExercise(cd.exName);
+                const isPullUpM = bandaDi(cd.exName, cd.sessionId, ex);   // il verso della banda, o null (Training 390)
                 const resistOptionsM = RESIST_VALUES.map(v =>
                   `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
                 ).join('');
@@ -5112,7 +5195,7 @@ function renderTraining(){
                 return `<div style="padding:12px 0 4px;">
                   <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:10px;letter-spacing:.08em;">REGISTRA SERIE ${nextSetM}</div>
                   ${_tlRigaRepsRir(isTimedM, parsedRepsM, _exPerLato(ex, parsedRepsM), _contaPerLato(ex, parsedRepsM))}
-                  ${isPullUpM ? bandPickerHTML(10) : `<div style="margin-bottom:10px;">
+                  ${isPullUpM ? bandPickerHTML(10, isPullUpM) : `<div style="margin-bottom:10px;">
                     <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl2})</label>
                     <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);" style="border:1.5px solid var(--s2);">
                       <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
@@ -5223,7 +5306,7 @@ function renderTraining(){
     const r5 = (v5e && !isTimed) ? (ex2.setNum === 1 ? rigaNumeriV5(ex2.exName, ex2.sessionId) : null) : null;
     const s0 = !isTimed ? getProgressionLive(ex2.exName, ex2.sessionId) : '';
     const numeri5 = (cls) => r5 ? `<div class="te5-numeri ${cls}"><b>${esc(r5.grande)}</b><span>${esc(r5.piccolo)}</span></div>`
-      : s0 ? `<div class="te5-numeri ${cls}"><b>${esc(s0)}</b></div>` : '';
+      : s0 ? `<div class="te5-numeri te5-frase ${cls}"><b>${esc(s0)}</b></div>` : '';
     const gifBlock = hasGif2
       ? `<img src="${gifEntry2.url}" alt="Esecuzione ${esc(ex2.exName)}" class="train-exec-gif">`
       : v5e
@@ -5301,13 +5384,16 @@ function renderTraining(){
         const logs = byEx[exName];
         const isTimed = isTimedExerciseByName(exName);
         const repsLbl = isTimed ? 'sec' : 'r';
-        const isPullUpEx = isPullUpExercise(exName);
+        const pullUpEx = isPullUpExercise(exName);
+        const versoEx = bandaDi(exName) || (pullUpEx ? 'assistenza' : (logs.some(l => _bandaDellaSerie(l) === BAND_FREE) ? 'assistenza' : 'resistenza'));
         const rows = logs.map(l => {
+          // a colore le trazioni e le serie che hanno un colore (Training 390); le serie in numeri restano in numeri
+          const isPullUpEx = pullUpEx || !!_bandaDellaSerie(l);
           if(l.id === editId){
             // Edit inline — BLOCCO 3: trazioni → select colore al posto di input lbs
             const resistInput = isPullUpEx
               ? `<select id="elr-resist" onchange="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-sans);">
-                  <option value="">—</option>${BAND_COLORS.map(c=>`<option value="${c}" ${editD.resistance===c?'selected':''}>${c}</option>`).join('')}
+                  <option value="">—</option>${(versoEx === 'resistenza' ? BAND_RESIST : BAND_COLORS).map(c=>`<option value="${c}" ${editD.resistance===c?'selected':''}>${c}</option>`).join('')}
                 </select>`
               : `<input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">`;
             return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--s2);flex-wrap:wrap;">
@@ -5322,7 +5408,7 @@ function renderTraining(){
           }
           // BLOCCO 3 — Trazioni: mostra colore banda al posto di "X lbs"
           const resistLabel = isPullUpEx
-            ? (l.band_color ? bandLabel(l.band_color) : '')
+            ? (l.band_color ? bandLabelV(l.band_color, versoEx || 'assistenza') : '')
             : caricoTesto(l.resistance);
           // Per lato (Training 280): «8 dx · 7 sx» al posto del numero solo
           const dueLati = (l.reps_dx != null && l.reps_sx != null);
@@ -6082,8 +6168,8 @@ function _registroV5(ex, setNum, isTimed, parsedReps, isPullUp, unitLbl, resistO
   let n = 0;
   const reps = domanda(++n, isTimed ? (contaPerLato ? 'Quanto è durata, per lato? (sec)' : 'Quanto è durata? (sec)') : dueLati ? 'Quante ripetizioni? (destro · sinistro)' : contaPerLato ? 'Quante ripetizioni per lato?' : 'Quante ripetizioni?')
     + `<div class="tl5-campi">${_tlRepsSelect(isTimed, parsedReps)}${dueLati ? _tlRepsSelect(isTimed, parsedReps, 'sx') : ''}</div>`;
-  const carico = domanda(++n, isPullUp ? 'Con quale banda?' : `Con quanto? (${unitLbl})`)
-    + (isPullUp ? bandPickerHTML(10) : `<select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);">
+  const carico = domanda(++n, isPullUp ? (isPullUp === 'resistenza' ? 'Con quale elastico?' : 'Con quale banda?') : `Con quanto? (${unitLbl})`)
+    + (isPullUp ? bandPickerHTML(10, isPullUp) : `<select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);">
         <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
         ${resistOptions}
       </select>`);
@@ -6107,11 +6193,12 @@ function openLogModal(sessionId, exName, setNum, opts){
     .sort();
   const lastKey = prevKeys.pop();
   const lastResist = lastKey ? ST.trainLoggedSets[lastKey]?.resistance : null;
-  if(isPullUpExercise(exName)){
-    // BLOCCO 3 — Trazioni: il "carico" è il COLORE della banda di assistenza.
-    // L'ultimo colore loggato vive in resistance (testuale) o in band_color esplicito.
+  const versoBanda = bandaDi(exName, sessionId);
+  if(versoBanda){
+    // BLOCCO 3 — Trazioni: il "carico" è il COLORE della banda di assistenza; dal Training 390 anche l'elastico di
+    // ogni esercizio fatto con l'elastico. L'ultimo colore loggato vive in resistance (testuale) o in band_color.
     const lastBand = lastKey ? (ST.trainLoggedSets[lastKey]?.band_color || ST.trainLoggedSets[lastKey]?.resistance) : null;
-    ST.trainLogBandColor = (lastBand && BAND_COLORS.includes(lastBand)) ? lastBand : null;
+    ST.trainLogBandColor = (lastBand && scalaBanda(versoBanda).includes(lastBand)) ? lastBand : null;
     ST.trainLogResist = null;
   } else {
     // Default = ultimo valore loggato per questo esercizio oggi.
@@ -6136,8 +6223,8 @@ function openLogModal(sessionId, exName, setNum, opts){
   // ripetizioni (Training 510, Pallof con l'elastico: il registro apriva su «—» e la serie si salvava senza carico).
   const prossima = _prossimaDaCompilare(exName, sessionId, !lastKey);
   if(prossima){
-    if(isPullUpExercise(exName)){
-      if(prossima.bandColor && BAND_COLORS.includes(prossima.bandColor)) ST.trainLogBandColor = prossima.bandColor;
+    if(versoBanda){
+      if(prossima.bandColor && scalaBanda(versoBanda).includes(prossima.bandColor)) ST.trainLogBandColor = prossima.bandColor;
     } else if(prossima.resistance != null){
       const v = Math.round(Number(prossima.resistance) / 10) * 10;   // la tendina va di 10 in 10
       if(RESIST_VALUES.includes(v)) ST.trainLogResist = v;
@@ -6198,9 +6285,9 @@ async function confirmEditLog(k){
   const sessionId = parts[0];
   const exName = parts.slice(1, parts.length-2).join('_');
   // BLOCCO 3 — Trazioni: resistance contiene il colore banda. DB: resistance NULL + band_color.
-  const isPullUp = isPullUpExercise(exName);
+  const isPullUp = isPullUpExercise(exName) || !!_bandaDellaSerie(prev);   // a colore anche le serie con l'elastico (Training 390)
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
-  if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
+  if(isPullUp && !bandColor){ showToast('Scegli il colore','⚠️'); return; }
   ST.trainLoggedSets[k] = { ...prev, reps, resistance, band_color: bandColor };
   if(perLato){ ST.trainLoggedSets[k].repsDx = repsDx; ST.trainLoggedSets[k].repsSx = repsSx; }
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
@@ -7278,7 +7365,7 @@ function _renderTabataAParte(){
 function _testoPartenza(p, exName){
   if(!p) return 'nessuna serie registrata: parti leggero';
   const raw = (p.band_color && BAND_COLORS.includes(p.band_color)) ? p.band_color : p.resistance;
-  const resist = caricoTesto(raw) || (isPullUpExercise(exName || '') ? '' : 'corpo libero');
+  const resist = caricoTesto(raw) || (bandaDi(exName || '') ? '' : 'corpo libero');
   const parti = [`${p.reps} rip`];
   if(resist) parti.push(resist);
   if(p.rir_actual != null) parti.push(`RIR ${p.rir_actual}`);

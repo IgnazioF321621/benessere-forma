@@ -155,7 +155,8 @@ async function nuovo(o){
     atteso('320 · più ripetizioni (affondi): si sale oltre il tetto', sugg('Affondi', 12, 2, ''), 'S2: corpo libero · più ripetizioni · sali a 13 reps per lato · RIR 2');
     atteso('320 · carico in mano (dal jsonb): a corpo libero si prende un peso', sugg('Step-up alto', 12, 2, ''), 'S2: carico in mano: 10 lbs · riparti da 8 reps per lato · RIR 2');
     atteso('320 · carico in mano con un peso già in mano: un passo in su', sugg('Step-up alto', 12, 2, '10'), 'S2: 20 lbs · riparti da 8 reps per lato · RIR 2');
-    atteso('320 · elastico più duro (curl): un passo in su, nominato', sugg('Curl elastico', 15, 2, '20'), 'S2: elastico più duro: 30 lbs · riparti da 10 reps · RIR 2');
+    // dal Training 390 l'elastico si misura a colore: un gradino più duro, nominato
+    atteso('320 · elastico più duro (curl): un passo in su, nominato', a.win.computeNextSetSuggestion({ sessionId:'upperA', exName:'Curl elastico', setNum:1, reps:15, resistance:'', rir:2, exData:a.win.findExercise('Curl elastico', 'upperA'), sess, bandColor:'Rossa' }), 'S2: elastico nero (più duro) · riparti da 10 reps · RIR 2');
     atteso('320 · carico (panca): come prima', sugg('Panca elastico', 10, 2, '20'), 'S2: 30 lbs · riparti da 6 reps · RIR 2');
     atteso('320 · senza colonna (rematore): come prima', sugg('Rematore elastico', 10, 2, '20'), 'S2: 30 lbs · riparti da 6 reps · RIR 2');
     atteso('320 · tenuta più lunga (plank), senza RIR nelle tenute (Training 550)', sugg('Plank', 40, 2, ''), 'S2: corpo libero · tenuta più lunga · sali a 45 sec');
