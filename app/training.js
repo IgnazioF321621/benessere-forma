@@ -316,8 +316,9 @@ function _dataAperta(map, page){
 //      da una rigenerazione della scheda)
 // Prima leggeva solo `.in('exercise_name', nomi di oggi)`: bastava una rinomina a
 // catalogo perché "Ultima volta" sparisse per quell'esercizio.
+const STORIA_SEDUTE = 8;   // quante sedute indietro si guarda per un salto di colore fallito (Training 392)
 async function loadLastLoggedSets(sessionId){
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.lastLoggedSets = {}; return; }
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.lastLoggedSets = {}; ST.lastSessionSets = {}; ST.storiaSerie = {}; return; }
   const sess = getTrainingSession(sessionId);
   if(!sess) return;
   try {
@@ -336,7 +337,18 @@ async function loadLastLoggedSets(sessionId){
     // Tutte le serie dell'ultima seduta di ogni esercizio, non solo l'ultima (Training 440): la prima
     // serie di oggi riparte dalla più forte (obiettivoPrimaSerie). Stesso esercizio, stessa data.
     const serie = {};
+    // Le ultime sedute di ogni esercizio (Training 392): servono a riconoscere un salto di colore fallito. Nessuna
+    // lettura in più: sono le righe che questa lettura scorre già, fino a STORIA_SEDUTE date per esercizio.
+    const storia = {}, storiaDate = {};
+    const ricorda = (canon, row) => {
+      const d = storiaDate[canon] || (storiaDate[canon] = new Set());
+      if(!d.has(row.date) && d.size >= STORIA_SEDUTE) return;
+      d.add(row.date);
+      const righe = storia[canon] || (storia[canon] = []);
+      if(!righe.includes(row)) righe.push(row);
+    };
     const assegna = (canon, row) => {
+      ricorda(canon, row);
       if(!map[canon]){ map[canon] = row; serie[canon] = [row]; return; }
       if(serie[canon] && map[canon].date === row.date && !serie[canon].includes(row)) serie[canon].push(row);
     };
@@ -413,9 +425,10 @@ async function loadLastLoggedSets(sessionId){
           page2.forEach(row => {
             const norm = _normExName(row.exercise_name);
             for(const [canon, nomi] of nomiPerCanon){
-              if(map[canon] && map[canon].date !== row.date) continue;
               const match = (row.exercise_code && canonByCodice.get(row.exercise_code) === canon)
                 || [...nomi].some(n => _normExName(n) === norm || n === norm);
+              if(match) ricorda(canon, row);
+              if(map[canon] && map[canon].date !== row.date) continue;
               if(match) assegna(canon, row);
             }
           });
@@ -428,6 +441,7 @@ async function loadLastLoggedSets(sessionId){
 
     ST.lastLoggedSets = map;
     ST.lastSessionSets = serie;
+    ST.storiaSerie = storia;
     if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
   } catch(e){
     console.warn('loadLastLoggedSets error:', e?.message);
@@ -2757,10 +2771,45 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // contano le serie prescritte, le prime N per numero: una serie in più fatta per conto proprio (12 · 12 · 12 e una
     // quarta a 9, con 3 prescritte) non blocca il passaggio (revisione della Regia)
     const nPrescritte = Number(exData.sets) || 1;
-    const serieUltima = ((ST.lastSessionSets && ST.lastSessionSets[exName]) || []).slice()
+    const tutteUltima = (ST.lastSessionSets && ST.lastSessionSets[exName]) || [];
+    const serieUltima = tutteUltima.slice()
       .sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0)).slice(0, nPrescritte);
+    // La cima allargata dopo un salto fallito (Training 392, 17 novembre 2026, decisione di Ignazio). Se il colore dopo
+    // è troppo duro (sotto il minimo) si torna a quello di prima, e lì rifare «tutte in cima» riproponeva lo stesso salto:
+    // un giro senza uscita. Dopo un salto fallito sul colore di prima si sale oltre la cima, fino alla cima allargata
+    // (cima + un quarto, almeno 2: 12 → 15, 6 → 8), e il salto si ripropone solo con tutte le serie lì. Allargare
+    // l'intervallo prima di cambiare resistenza è la via della doppia progressione quando il gradino è grosso (le
+    // ripetizioni fino a 15-20 valgono per l'ipertrofia quanto le 8-12: Schoenfeld et al. 2017, J Strength Cond Res 31:3508).
+    // Il salto fallito si legge dallo storico, senza colonne nuove (ST.storiaSerie: le ultime STORIA_SEDUTE sedute
+    // dell'esercizio, dalla lettura che c'è già). Si guarda l'ultimo giorno, oggi compreso, in cui c'è una serie su un
+    // colore più duro di questo: è un salto fallito se la PRIMA serie su quel colore è finita sotto il minimo.
+    //   · la prima, non una qualunque: 10 · 9 · 7 sul rosso è stanchezza, non un salto fallito (e lo scarico sul
+    //     giallo che viene dopo non deve allargare la cima);
+    //   · l'ultimo giorno col colore più duro: se lì è andata bene (sopra il minimo) il salto era riuscito, e su
+    //     questo colore si è tornati per altro (scarico, settimana leggera);
+    //   · oltre le STORIA_SEDUTE sedute il salto fallito si dimentica, e con tutte le serie in cima si riprova.
+    // Fare una ripetizione in più per conto proprio (12 · 12 · 13) non allarga niente: il salto arriva come prima.
+    // Mai in cima alla scala né con le vie che restano sul colore: lì oltre la cima si sale già.
+    const cimaAllargata = repsMax + Math.max(2 * step, Math.round(repsMax * 0.25 / step) * step);
+    const repsDi = (l) => Number(l && l.reps) || 0;
+    // solo il colore subito dopo questo (revisione): un nero fallito non allarga la cima del giallo nello scarico che segue
+    const piuDura = (l) => !!harder && _bandaDellaSerie(l) === harder;
+    const primaFallita = (righe) => { const d = righe.filter(piuDura).sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0)); return d.length ? repsDi(d[0]) < repsMin : null; };
+    const oggiSerie = Object.keys(ST.trainLoggedSets || {}).filter(k => k.startsWith(`${sessionId}_${exName}_`) && k.endsWith('_' + todayKey()))
+      .map(k => ({ ...ST.trainLoggedSets[k], set_number: parseInt(k.split('_').slice(-2)[0], 10) || 0 }));
+    const storiaEx = (ST.storiaSerie && ST.storiaSerie[exName]) || tutteUltima;
+    const saltoFallito = () => {
+      const oggiEsito = primaFallita(oggiSerie);
+      if(oggiEsito != null) return oggiEsito;
+      const giorni = [...new Set(storiaEx.map(l => l.date))].sort().reverse();
+      for(const g of giorni){ const esito = primaFallita(storiaEx.filter(l => l.date === g)); if(esito != null) return esito; }
+      return false;
+    };
+    const allargata = !!cur && !inCima && !restaSulColore && saltoFallito();
+    const tetto = allargata ? cimaAllargata : repsMax;
+    const clampReps = (n) => Math.max(repsMin, Math.min(tetto, n));   // nel ramo a banda il tetto è quello del colore
     const tutteInCima = !!cur && serieUltima.length >= nPrescritte
-      && serieUltima.every(l => (Number(l.reps) || 0) >= repsMax && _bandaDellaSerie(l) === cur);
+      && serieUltima.every(l => repsDi(l) >= tetto && _bandaDellaSerie(l) === cur);
     // 0) prima serie di oggi (Training 440): la più forte dell'ultima seduta, uguale (serieDaRipetere); con tutte le
     //    serie in cima, il gradino più duro dal minimo
     if(primaSerie && repsDone >= repsMin){
@@ -2779,6 +2828,8 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // 2) tetto + RIR ≥ target → un gradino più duro. In cima alla scala si sale di ripetizioni, oltre il tetto.
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
       if(inCima || restaSulColore) return fine({ bandColor: cur, reps: repsDone + step }, bandTxt, restaSulColore ? via : null, `sali a ${repsDone + step} ${u}`);
+      // dopo un salto fallito si sale oltre la cima, fino alla cima allargata (Training 392)
+      if(allargata && repsDone < tetto) return fine({ bandColor: cur, reps: clampReps(repsDone + step) }, bandTxt, `sali a ${clampReps(repsDone + step)} ${u} (fino a ${tetto})`);
       // dentro la seduta niente salto di colore: si resta in cima; il salto lo decide la prima serie della volta dopo
       return fine({ bandColor: cur, reps: clampReps(repsDone) }, bandTxt, `resta a ${clampReps(repsDone)} ${u}`);
     }
@@ -5000,7 +5051,7 @@ function renderTraining(){
 
       // Coach insight deterministico, sulla misura dell'esercizio
       const cosa = { carico:'il carico', banda:'la banda', sec:'la tenuta', reps:'le ripetizioni' }[misura.tipo];
-      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda: misura.verso === 'resistenza' ? 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi all\'elastico più duro.' : 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi alla banda che aiuta meno.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
+      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda: misura.verso === 'resistenza' ? 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi all\'elastico più duro. Se è troppo duro torni a questo e sali ancora di qualche ripetizione prima di riprovare.' : 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi alla banda che aiuta meno. Se è troppo dura torni a questa e sali ancora di qualche ripetizione prima di riprovare.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
       let insightText = 'Registra almeno 3 sessioni per vedere un\'analisi della tua progressione.';
       if(diffTrend != null){
         if(diffTrend > 0) insightText = misura.tipo === 'banda' ? 'Nelle ultime sessioni usi meno assistenza. Sei in progressione — continua così.' : `Nelle ultime sessioni ${cosa === 'le ripetizioni' ? 'le ripetizioni salgono' : cosa + ' sale'}. Sei in progressione — continua così.`;
