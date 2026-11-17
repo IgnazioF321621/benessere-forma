@@ -2750,8 +2750,23 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // la via del catalogo (Training 320) resta: «più ripetizioni» e «tenuta più lunga» non cambiano elastico
     const restaSulColore = R && (via === 'più ripetizioni' || via === 'tenuta più lunga');
     const bandTxt = cur ? frase(cur) : (R ? 'scegli l\'elastico' : 'stessa banda');
-    // 0) prima serie di oggi (Training 440): la più forte dell'ultima seduta, uguale (serieDaRipetere)
-    if(primaSerie && repsDone >= repsMin) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `${repsDone} ${u}`);
+    // Il colore successivo solo quando TUTTE le serie dell'esercizio nell'ultima seduta sono arrivate in cima alle
+    // ripetizioni (decisione di Ignazio del 17 novembre 2026, doppia progressione: fra un colore e l'altro il salto è
+    // grosso, e una serie sola in cima non basta). Si decide alla prima serie della seduta dopo; dentro la seduta la
+    // serie dopo non propone mai il salto. Vale per la misura a banda, nei due versi; i carichi in numeri restano com'erano.
+    // contano le serie prescritte, le prime N per numero: una serie in più fatta per conto proprio (12 · 12 · 12 e una
+    // quarta a 9, con 3 prescritte) non blocca il passaggio (revisione della Regia)
+    const nPrescritte = Number(exData.sets) || 1;
+    const serieUltima = ((ST.lastSessionSets && ST.lastSessionSets[exName]) || []).slice()
+      .sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0)).slice(0, nPrescritte);
+    const tutteInCima = !!cur && serieUltima.length >= nPrescritte
+      && serieUltima.every(l => (Number(l.reps) || 0) >= repsMax && _bandaDellaSerie(l) === cur);
+    // 0) prima serie di oggi (Training 440): la più forte dell'ultima seduta, uguale (serieDaRipetere); con tutte le
+    //    serie in cima, il gradino più duro dal minimo
+    if(primaSerie && repsDone >= repsMin){
+      if(tutteInCima && harder && !restaSulColore) return fine({ bandColor: harder, reps: repsMin }, `${frase(harder)} (${R ? 'più duro' : 'più dura'})`, `riparti da ${repsMin} ${u}`);
+      return fine({ bandColor: cur, reps: repsDone }, bandTxt, `${repsDone} ${u}`);
+    }
     // 1) cedimento (RIR 0) ma reps nel range → stesso gradino, -1 rep
     //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
     if(rirVal === 0 && repsDone >= repsMin){
@@ -2764,9 +2779,8 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // 2) tetto + RIR ≥ target → un gradino più duro. In cima alla scala si sale di ripetizioni, oltre il tetto.
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
       if(inCima || restaSulColore) return fine({ bandColor: cur, reps: repsDone + step }, bandTxt, restaSulColore ? via : null, `sali a ${repsDone + step} ${u}`);
-      if(R && !cur) return fine({ bandColor: null, reps: clampReps(repsDone) }, bandTxt, `${clampReps(repsDone)} ${u}`);
-      const su = harder || 'Gialla';
-      return fine({ bandColor: su, reps: repsMin }, `${frase(su)} (${R ? 'più duro' : 'più dura'})`, `riparti da ${repsMin} ${u}`);
+      // dentro la seduta niente salto di colore: si resta in cima; il salto lo decide la prima serie della volta dopo
+      return fine({ bandColor: cur, reps: clampReps(repsDone) }, bandTxt, `resta a ${clampReps(repsDone)} ${u}`);
     }
     // 3) sotto range → un gradino più facile. In fondo alla scala non c'è niente di più facile: si resta lì.
     if(repsDone < repsMin){
@@ -4986,7 +5000,7 @@ function renderTraining(){
 
       // Coach insight deterministico, sulla misura dell'esercizio
       const cosa = { carico:'il carico', banda:'la banda', sec:'la tenuta', reps:'le ripetizioni' }[misura.tipo];
-      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda:'Quando arrivi in cima alle ripetizioni, prova la banda più dura.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
+      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda: misura.verso === 'resistenza' ? 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi all\'elastico più duro.' : 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi alla banda che aiuta meno.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
       let insightText = 'Registra almeno 3 sessioni per vedere un\'analisi della tua progressione.';
       if(diffTrend != null){
         if(diffTrend > 0) insightText = misura.tipo === 'banda' ? 'Nelle ultime sessioni usi meno assistenza. Sei in progressione — continua così.' : `Nelle ultime sessioni ${cosa === 'le ripetizioni' ? 'le ripetizioni salgono' : cosa + ' sale'}. Sei in progressione — continua così.`;
