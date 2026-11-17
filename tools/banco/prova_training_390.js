@@ -144,9 +144,54 @@ async function nuovo(logs){
   atteso('7 · dopo il primo tocco lo sblocco è fatto', W.eval('_audioGestureUnlocked'), true);
   a.doc.dispatchEvent(new W.Event('visibilitychange'));
   atteso('7 · al rientro lo sblocco al tocco si riarma', [W.eval('_audioGestureUnlocked'), W.eval('_audioDopoRientro')], [false, true]);
+  // un contesto che corre non si tocca (revisione): niente contesto nuovo, e l'inizio del tocco non conta
+  a.doc.dispatchEvent(new W.Event('touchstart', { bubbles:true }));
+  atteso('7 · l\'inizio del tocco (touchstart) dopo il rientro non fa niente: si aspetta la fine del tocco', W.eval('_audioGestureUnlocked'), false);
+  tocco();
+  atteso('7 · il contesto correva: il primo tocco non lo rifà', [W.eval('_audioCtx') === ctx1, W.eval('_audioGestureUnlocked')], [true, true]);
+  // il contesto è rimasto fermo dopo il rientro: il primo tocco lo rifà dentro il gesto
+  a.doc.dispatchEvent(new W.Event('visibilitychange'));
+  await new Promise(r => setTimeout(r, 20));
+  W.eval('_audioCtx').state = 'suspended';
+  const ctxFermo = W.eval('_audioCtx');
+  ctxFermo.resume = () => new Promise(() => {});   // iPhone: la ripresa senza un tocco non risponde
   tocco();
   const ctx2 = W.eval('_audioCtx');
-  atteso('7 · il primo tocco dopo il rientro rifà il contesto audio dentro il gesto', [ctx2 !== ctx1, ctx1.state, ctx2 && ctx2.state, W.eval('_audioDopoRientro')], [true, 'closed', 'running', false]);
+  atteso('7 · il contesto era fermo: il primo tocco dopo il rientro lo rifà dentro il gesto', [ctx2 !== ctxFermo, ctxFermo.state, ctx2 && ctx2.state, W.eval('_audioDopoRientro')], [true, 'closed', 'running', false]);
+  // «interrupted» al rientro: prima si prova a riprenderlo, non si butta subito
+  const ctxI = W.eval('_audioCtx');
+  ctxI.state = 'interrupted';
+  const pI = W._riattivaAudio();
+  atteso('7 · «interrupted» al rientro: il contesto non si butta subito', W.eval('_audioCtx') === ctxI, true);
+  atteso('7 · …e se riparte resta lui', [await pI, W.eval('_audioCtx') === ctxI, ctxI.state], [true, true, 'running']);
+  // la nota: solo nella frase della soglia
+  atteso('6 · «lascia 2-3 ripetizioni di riserva» non si tocca; nel riscaldamento la nota resta com\'è', [W._notaPerSeduta('Lascia 2-3 ripetizioni di riserva', { reps:'4-6' }), W._notaPerSeduta(NOTA, { reps:'15-20', warmup:true }) === NOTA], ['Lascia 2-3 ripetizioni di riserva', true]);
+
+  // ── 8 · il riscaldamento specifico: tre voci, al massimo 3 minuti, con le immagini ──
+  {
+    const R = require('../../shared/rotazione.js');
+    const b = await nuovo(vecchie);
+    const sei = ['EX605', 'EX601', 'EX829', 'EX717', 'EX416', 'EX788'].map((c, i) => ({ codice:c, name:'Voce ' + (i + 1), sets:2, reps: i === 5 ? '30 sec' : '15-20', warmup:true, alert: i === 0 ? 'ginocchia: marcia sul posto' : undefined }));
+    b.t.schede_utente[0].scheda.sessioni[0].warmup = sei;
+    b.W.fetchExerciseMedia = async (nome, codice) => ({ status:'cached', cached_url:'https://esempio.test/' + codice + '.gif' });
+    await b.W.loadActiveScheda();
+    const w = b.W.getTrainingSession('upperA').warmup;
+    atteso('8 · una scheda di prima con 6 voci si legge a tre: la leggera, le scapole e la cuffia', w.map(x => x.codice), ['EX605', 'EX717', 'EX416']);
+    atteso('8 · la scheda in memoria e quella salvata restano a 6 voci', [b.ST.schedaAttiva.scheda.sessioni[0].warmup.length, b.supa._calls.filter(c => c.table === 'schede_utente' && c.op !== 'select').length], [6, 0]);
+    atteso('8 · tre voci da 50 secondi e 10 per cambiare: 170 secondi, sotto i 180', [b.W._warmupDurataTotale(w), R.riscaldamentoSec(sei), R.RISCALDAMENTO_MAX], [170, 170, 180]);
+    atteso('8 · il generatore: tre voci per seduta', [b.W.eval('_TRAIN_GEN_WARM_VOCI.upper.length'), b.W.eval('_TRAIN_GEN_WARM_VOCI.lower.length')], [3, 3]);
+    b.ST.trainSession = 'upperA'; b.ST.trainAnticipato = 'upperA';
+    b.W.renderTraining();
+    await new Promise(r => setTimeout(r, 30));
+    b.W.renderTraining();
+    const pg = b.doc.getElementById('page-training');
+    atteso('8 · la card: «3 esercizi · 2 min 50 s in tutto»', /3 esercizi · 2 min 50 s in tutto/.test(pg.textContent.replace(/\s+/g, ' ')), true);
+    atteso('8 · nella lista ogni voce ha la sua immagine, letta una volta sola col suo codice', [[...pg.querySelectorAll('.warm-gif-mini')].map(i => i.getAttribute('src')), pg.querySelectorAll('.ex-adattamento').length], [['https://esempio.test/EX605.gif', 'https://esempio.test/EX717.gif', 'https://esempio.test/EX416.gif'], 0]);
+    b.W.warmupFlowStart(); b.W.renderTraining();
+    const grande = b.doc.querySelector('.warm-gif');
+    atteso('8 · mentre si esegue: l\'immagine grande della voce, e il suo adattamento', [grande && grande.getAttribute('src'), [...b.doc.querySelectorAll('.ex-adattamento')].length >= 1, b.ST.trainWarmupFlow.remaining], ['https://esempio.test/EX605.gif', true, 50]);
+    b.W.warmupFlowEnd();
+  }
 
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);

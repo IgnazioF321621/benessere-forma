@@ -57,7 +57,12 @@ var ZTRotazione = (function(){
   //   cambio       passare da un esercizio al successivo
   //   finisher     il Tabata, se la scheda non ne scrive i round
   //   voce, riposoVoce, lato, pausaLato   il riscaldamento: 60 s a voce, 10 s fra le voci, 30 s per lato e 5 per cambiare
-  var TEMPO = { attivazione: 300, serie: 30, cambio: 60, finisher: 300, voce: 60, riposoVoce: 10, lato: 30, pausaLato: 5 };
+  // Il riscaldamento specifico dura al massimo 3 minuti (Training 390, 17 novembre 2026, segnalazione di Ignazio 3e11a3d8:
+  // «6 esercizi · 6 min 20 s», ci si perde): 3 voci da 50 secondi e 10 per cambiare = 170 s (una voce per lato: 20 + 5 + 20).
+  // Prima dei pesi basta un riscaldamento breve e specifico, senza fatica: Fradkin, Zazryn e Smoliga 2010 (J Strength Cond
+  // Res 24:140), McGowan et al. 2015 (Sports Med 45:1523). Le serie di avvicinamento le fa la prima serie leggera.
+  var TEMPO = { attivazione: 300, serie: 30, cambio: 60, finisher: 300, voce: 50, riposoVoce: 10, lato: 20, pausaLato: 5 };
+  var RISCALDAMENTO_VOCI = 3, RISCALDAMENTO_MAX = 180;
   var RECUPERO_PARTENZA = 90;                // il recupero fra le serie quando la scheda non lo scrive
 
   function eRecupero(sid){ return /^recovery/i.test(String(sid || '')); }
@@ -192,8 +197,18 @@ var ZTRotazione = (function(){
   // Il riscaldamento, in secondi, con lo stesso conto del flusso dell'app (_warmupDurataTotale, che ora chiama questa):
   // ogni voce col suo tempo (per lato i due lati e la pausa per cambiare; un allungamento fermo «30 sec» dura i suoi
   // secondi, al massimo 60), 10 s fra una voce e l'altra.
-  function riscaldamentoSec(items){
+  // Le tre voci di un riscaldamento scritto prima del 390 (6 nell'Upper, 5 nella Lower, nell'ordine del generatore:
+  // due voci di movimento leggero, poi le zone). Restano il movimento leggero e le due zone che contano per la seduta:
+  // scapole e cuffia dei rotatori nell'Upper, anche e ginocchia nella Lower. Fino a 3 voci non cambia niente. Solo in
+  // lettura: la scheda salvata non si riscrive. La stessa regola per l'app e per il Calendario.
+  function riscaldamentoBreve(items){
     var voci = (items || []).filter(Boolean);
+    if(voci.length <= RISCALDAMENTO_VOCI) return voci;
+    var idx = voci.length >= 6 ? [0, 3, 4] : [0, 2, 3];
+    return idx.map(function(i){ return voci[i]; });
+  }
+  function riscaldamentoSec(items){
+    var voci = riscaldamentoBreve(items);
     if(!voci.length) return 0;
     var t = 0;
     voci.forEach(function(w){
@@ -362,7 +377,7 @@ var ZTRotazione = (function(){
     giorniScelti: giorniScelti, orarioValido: orarioValido,
     posizione: posizione, prossima: prossima, sedutePreviste: sedutePreviste, ics: ics,
     URL_TRAINING: URL_TRAINING, DESCRIZIONE_MAX: DESCRIZIONE_MAX, TEMPO: TEMPO,
-    leggiReps: leggiReps, contaPerLato: contaPerLato, riscaldamentoSec: riscaldamentoSec, tabataInCoda: tabataInCoda,
+    leggiReps: leggiReps, contaPerLato: contaPerLato, riscaldamentoSec: riscaldamentoSec, riscaldamentoBreve: riscaldamentoBreve, RISCALDAMENTO_MAX: RISCALDAMENTO_MAX, tabataInCoda: tabataInCoda,
     durataSeduta: durataSeduta, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
     scaricoPerEventi: scaricoPerEventi,
   };

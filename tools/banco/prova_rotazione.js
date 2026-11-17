@@ -139,11 +139,13 @@ const casi = [];
 casi.push([{ reps: '8-12', unilaterale: 'si' }, null], [{ reps: '8-12', unilaterale: 'alternato' }, 'no'], [null, 'si']);
 atteso('541 · contaPerLato risponde come _contaPerLato di prima su ' + casi.length + ' casi', casi.filter(([ex, u]) => R.contaPerLato(ex, u) !== vecchia.contaPerLato(ex, u)).length, 0);
 const voci = [[], [{ reps: '15-20' }], [{ reps: '15-20' }, { reps: '30 sec' }, { reps: '30 sec per lato' }, null, { reps: '90 sec' }, { reps: '45 sec' }], [{ reps: '10 min' }, { reps: '0 sec' }]];
-atteso('541 · riscaldamentoSec risponde come _warmupDurataTotale di prima', voci.map(v => [R.riscaldamentoSec(v), vecchia.warmup(v)]).filter(([a, b]) => a !== b), []);
+// dal Training 390 il riscaldamento è di tre voci da 50 s (20 per lato), al massimo 3 minuti: non è più il conto di prima
+atteso('390 · riscaldamentoSec: niente, una voce, sei voci lette a tre (la prima, la terza e la quarta), due voci', voci.map(v => R.riscaldamentoSec(v)), [0, 50, 50 + 45 + 50 + 20, 110]);
+atteso('390 · riscaldamentoBreve: fino a 3 voci com\'è; 6 voci → la 1ª, la 4ª e la 5ª; 5 voci → la 1ª, la 3ª e la 4ª; mai oltre i 180 s', [R.riscaldamentoBreve([1, 2, 3]), R.riscaldamentoBreve([1, 2, 3, 4, 5, 6]), R.riscaldamentoBreve([1, 2, 3, 4, 5]), R.riscaldamentoSec([{ reps:'30 sec per lato' }, { reps:'30 sec per lato' }, { reps:'30 sec per lato' }, { reps:'15-20' }, { reps:'15-20' }, { reps:'15-20' }]) <= R.RISCALDAMENTO_MAX], [[1, 2, 3], [1, 4, 5], [1, 3, 4], true]);
 const profili = [{ tabata: 'coda' }, { tabata: 'giorni', tabata_giorni: [4] }, { tabata: 'giorni', tabata_giorni: ['1', 7] }, { tabata: 'a_parte' }, { tabata: 'spento' }, { tabata: 'boh' }, {}, null];
 const giorniT = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'];
 atteso('541 · tabataInCoda risponde come quella di prima su 8 profili × 7 giorni', profili.flatMap(p => giorniT.map(g => [R.tabataInCoda(p, g), vecchia.tabataInCoda(p, g)])).filter(([a, b]) => a !== b).length, 0);
-atteso('541 · i tempi: attivazione = il blocco fisso (2 + 2 + 1 min), serie 30 s, cambio 60 s, Tabata 300 s (i numeri del generatore)', [R.TEMPO.attivazione, R.TEMPO.serie, R.TEMPO.cambio, R.TEMPO.finisher, R.TEMPO.voce, R.TEMPO.riposoVoce, R.TEMPO.lato, R.TEMPO.pausaLato], [300, 30, 60, 300, 60, 10, 30, 5]);
+atteso('541 · i tempi: attivazione = il blocco fisso (2 + 2 + 1 min), serie 30 s, cambio 60 s, Tabata 300 s (i numeri del generatore)', [R.TEMPO.attivazione, R.TEMPO.serie, R.TEMPO.cambio, R.TEMPO.finisher, R.TEMPO.voce, R.TEMPO.riposoVoce, R.TEMPO.lato, R.TEMPO.pausaLato], [300, 30, 60, 300, 50, 10, 20, 5]);
 
 // una seduta come la Upper A di Ignazio (forza, 3 minuti di recupero)
 const ES = (codice, name, sets, reps, rest_sec, extra) => ({ codice, name, sets, reps, rest_sec, ...(extra || {}) });
@@ -152,8 +154,8 @@ const UA = { id: 'upperA', name: 'Upper A', rest: '3 min', warmup: [{ reps: '15-
     ES('EX3', 'Croci inverse elastico', 3, '12-15', 75), ES('EX4', 'Pallof press con elastico', 3, '20-40 sec', 60, { isTimed: true }), ES('EX5', 'Russian twist', 3, '12-15', 75)],
   finisher: { round: 8, work_sec: 20, rest_sec: 10, exercises: [{ name: 'Burpee' }] } };
 const uniUA = (ex) => ({ EX4: 'si', EX5: 'alternato' })[ex.codice] || null;
-// 300 + 200 + 4 × (90 + 360 + 60) + (90 + 150 + 60) + (240 + 120 + 60) + (180 + 150 + 60) = 3650 s
-atteso('541 · durata Upper A: 300 + 200 + 4 × 510 + 300 + 420 + 390 = 3650 s → circa 60 minuti', [R.durataSeduta(UA, { unilaterale: uniUA }), R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA }))], [3650, 60]);
+// 300 + 170 (riscaldamento dal Training 390) + 4 × (90 + 360 + 60) + (90 + 150 + 60) + (240 + 120 + 60) + (180 + 150 + 60) = 3620 s
+atteso('541 · durata Upper A: 300 + 170 + 4 × 510 + 300 + 420 + 390 = 3620 s → circa 60 minuti', [R.durataSeduta(UA, { unilaterale: uniUA }), R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA }))], [3620, 60]);
 atteso('541 · col Tabata del giorno: + 240 + 60 s = 3950 s → circa 65 minuti', R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA, tabata: true })), 65);
 atteso('541 · senza recupero scritto si usa quello della seduta («3 min»), poi 90 s', [R.durataSeduta({ rest: '3 min', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ rest: '90 sec', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ exercises: [{ sets: 3, reps: '4-6' }] })], [300 + 90 + 360 + 60, 300 + 90 + 180 + 60, 300 + 90 + 180 + 60]);
 atteso('541 · minuti ai 5 più vicini, almeno 5', [0, 100, 449, 450, 3020, 3350].map(R.minutiSeduta), [5, 5, 5, 10, 50, 55]);

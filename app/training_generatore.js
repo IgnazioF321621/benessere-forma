@@ -732,7 +732,9 @@ async function loadActiveScheda() {
     const cycle = [];
     sessioniArr.forEach(s => {
       if (s && s.id) {
-        sessMap[s.id] = s;
+        // Training 390: il riscaldamento delle schede di prima (6 o 5 voci) si legge a tre voci, su una copia: la
+        // scheda in memoria (ST.schedaAttiva) e quella salvata restano com'erano
+        sessMap[s.id] = (Array.isArray(s.warmup) && s.warmup.length > 3) ? { ...s, warmup: ZTRotazione.riscaldamentoBreve(s.warmup) } : s;
         cycle.push(s.id);
       }
     });
@@ -3412,8 +3414,10 @@ function _trainGenPickWarmupByMuscle(pool, muscleKeywords, sessionIndex, usedWar
 // Una voce è { pattern } o { zona } o { gruppo }.
 const _TRAIN_GEN_WARM_VOCI = {
   // la cuffia, senza elastico né cavo, ripiega su una voce «spalle» a corpo libero (rotazioni, cerchi)
-  upper: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'colonna toracica' }, { zona:'scapole' }, { gruppo:'cuffia rotatori', ripiego:{ zona:'spalle' } }, { zona:'polsi' }],
-  lower: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'anche' }, { zona:'ginocchia' }, { zona:'caviglie' }],
+  // Training 390 (17 novembre 2026): tre voci, al massimo 3 minuti (ZTRotazione.TEMPO). Un movimento leggero e le due
+  // zone che contano per la seduta; prima erano 6 e 5 voci (colonna toracica, polsi e caviglie sono uscite).
+  upper: [{ pattern:'cardio_metabolico' }, { zona:'scapole' }, { gruppo:'cuffia rotatori', ripiego:{ zona:'spalle' } }],
+  lower: [{ pattern:'cardio_metabolico' }, { zona:'anche' }, { zona:'ginocchia' }],
 };
 
 // Le zone di una riga di catalogo (lista ';', minuscolo). [] se la colonna manca o è vuota.
@@ -3724,10 +3728,11 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap, ammissibili)
 // com'è. Solo in memoria, come gli altri testi: la riga del catalogo si corregge dal foglio.
 function _notaPerSeduta(testo, ex) {
   const t = String(testo || '');
-  if (!t || !ex || !ex.reps || typeof parseRepsRange !== 'function') return testo;
+  if (!t || !ex || !ex.reps || ex.warmup || typeof parseRepsRange !== 'function') return testo;
   const pr = parseRepsRange(ex.reps);
   if (!pr || pr.kind === 'seconds' || !(pr.max > 0)) return testo;
-  return t.replace(/\b(\d+)\s*[-–]\s*(\d+)\s+ripetizioni\b/g, (tutto, a, b) => (Number(b) === pr.max && Number(a) === pr.min) ? tutto : `${pr.max} ripetizioni`);
+  // solo dentro la frase della soglia («quando riesci a fare …», «quando reggi …»): «lascia 2-3 ripetizioni di riserva» resta
+  return t.replace(/(\bquando\b[^.·;]*?)\b(\d+)\s*[-–]\s*(\d+)\s+ripetizioni\b/gi, (tutto, prima, a, b) => (Number(b) === pr.max && Number(a) === pr.min) ? tutto : `${prima}${pr.max} ripetizioni`);
 }
 
 // I TESTI dell'esercizio dalla riga di catalogo (setup, esecuzione, errori, muscoli, alert): una funzione

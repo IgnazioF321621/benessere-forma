@@ -68,10 +68,18 @@ async function nuovo(){
     // il caso del bip «che non c'è proprio»: contesto rimasto «interrupted» dopo la musica
     const a = await nuovo();
     a.W.playPrepBeep();
+    // revisione del Training 390: un contesto «interrupted» che iPhone lascia riprendere resta lui (prima si buttava
+    // subito, e quello nuovo voleva un tocco: durante un recupero i bip restavano muti)
     a.contesti[0].state = 'interrupted';
     a.W.playPrepBeep();
     await aspetta();
-    atteso('contesto interrotto: i bip non suonano nel vuoto, il contesto si rifà', [a.contesti[0].suoni, a.contesti.length], [1, 2]);
+    atteso('contesto interrotto che si lascia riprendere: resta lui, e il tic suona lì', [a.contesti[0].suoni, a.contesti.length, a.contesti[0].state], [2, 1, 'running']);
+    // il caso del Training 340 (vocale, telefonata): la ripresa non lo sblocca → contesto nuovo
+    a.contesti[0].state = 'interrupted';
+    a.contesti[0].resume = () => Promise.resolve();
+    a.W.playPrepBeep();
+    await aspetta();
+    atteso('contesto interrotto che non riparte: i bip non suonano nel vuoto, il contesto si rifà', [a.contesti[0].suoni, a.contesti.length], [2, 2]);
     // revisione del Rilascio 51: se il telefono lascia riprendere senza tocco, il tic che ha scoperto
     // l'interruzione (uno solo, nessun altro bip dopo) suona sul contesto nuovo; prima rifai() diceva sempre
     // «no» e quel tic si perdeva

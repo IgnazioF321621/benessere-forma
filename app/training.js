@@ -1398,7 +1398,13 @@ function _suonaTono(tono, sospeso){
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
     if(ctx.state === 'running'){ fire(ctx); return; }
-    if(ctx.state === 'suspended'){ _sessioneAudioAmbiente(); ctx.resume().then(() => fire(ctx)).catch(()=>{}); return; }
+    if(ctx.state === 'suspended'){
+      _sessioneAudioAmbiente();
+      // se la ripresa non riesce senza un tocco, lo stop resta in sospeso e suona al primo tocco (revisione del 390)
+      const nonParte = () => { if(sospeso) _beepInSospeso = true; };
+      ctx.resume().then(() => { if(ctx.state === 'running') fire(ctx); else nonParte(); }).catch(nonParte);
+      return;
+    }
     // interrupted o closed
     if(sospeso){ _beepInSospeso = true; _riattivaAudio().then(_suonaInSospeso).catch(()=>{}); return; }
     _riattivaAudio().then(ok => { const c = _audioCtx; if(ok && c && c.state === 'running') fire(c); }).catch(()=>{});
@@ -3591,6 +3597,22 @@ function preparaGifAttivazione(){
   });
 }
 
+// Le GIF del riscaldamento specifico (Training 390, segnalazione di Ignazio: «le immagini come negli esercizi»): una
+// lettura per voce col suo codice, una volta sola, nella stessa memoria del Blocco Attivazione (gifAttivazione le trova).
+function preparaGifRiscaldamento(items){
+  if(!ST.attivazioneGif) ST.attivazioneGif = {};
+  (items || []).forEach(w => {
+    const k = w && w.codice;
+    if(!k || ST.attivazioneGif[k]) return;
+    ST.attivazioneGif[k] = { url:null, status:'loading' };
+    fetchExerciseMedia(w.name, w.codice).then(m => ({ url: (m && m.cached_url) || null, status: (m && m.status) || 'missing' }))
+      .catch(() => ({ url:null, status:'error' })).then(r => {
+        ST.attivazioneGif[k] = r;
+        if(r.url && ST.page === 'training') renderTraining();
+      });
+  });
+}
+
 // ── Renderer dedicato per il Blocco Attivazione (countdown ibrido 5 min, valido per tutte le sessioni) ──
 function _renderActivationSection(){
   if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
@@ -3732,6 +3754,7 @@ function _renderWarmupSection(s){
   if(!s || s.type === 'Recupero') return '';
   if(!Array.isArray(s.warmup) || !s.warmup.length) return '';
   const items = s.warmup;
+  preparaGifRiscaldamento(items);   // Training 390: le immagini, una volta sola
   // Collasso a fine flow (riga compatta riapribile al tap) — come il Blocco Attivazione
   if(ST.trainWarmupCollapsed){
     return `
@@ -3783,6 +3806,7 @@ function _renderWarmupSection(s){
       <div style="background:${accentBgFinal};border:2px solid ${accentFinal};border-radius:14px;padding:18px;margin-bottom:16px;">
         <div style="font-size:10px;color:${accentFinal};font-family:var(--font-mono);letter-spacing:.14em;font-weight:700;text-transform:uppercase;margin-bottom:6px;">${eyebrow}</div>
         ${titleLine}
+        ${gifAttivazione(isWork ? cur : next) ? `<img class="warm-gif" src="${esc(gifAttivazione(isWork ? cur : next))}" alt="${esc((isWork ? cur : next).name)}" style="display:block;width:100%;max-height:220px;object-fit:contain;background:var(--s1);border-radius:10px;margin-bottom:14px;">` : ''}
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
           <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:${numColor};font-variant-numeric:tabular-nums;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -3829,11 +3853,16 @@ function _renderWarmupSection(s){
     const infoIcon = hasDetail
       ? `<span class="ex-info-icon" onclick="event.stopPropagation();openWarmupInfo(${idx})" style="cursor:pointer;padding:0 3px;" title="Come si esegue">ⓘ</span>`
       : '';
+    // Training 390: meno testo. Nella lista la miniatura, il nome, la riga in italiano (una, corta) e il tempo;
+    // l'adattamento per le limitazioni, che era il grosso del testo, si legge mentre si esegue (nel riquadro in alto)
+    const gifW = gifAttivazione(w);
+    const mini = gifW ? `<img class="warm-gif-mini" src="${esc(gifW)}" alt="" loading="lazy" style="width:44px;height:44px;object-fit:cover;border-radius:6px;background:var(--s1);flex-shrink:0;">` : '';
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
+        ${mini}
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:2px;"><span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}</div>
-          ${_rigaSpiegazione(w)}${_rigaAdattamento(w)}
+          ${_rigaSpiegazione(w)}
         </div>
         <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${_warmupPerLato(w) ? `${WARMUP_ISO_SIDE_SEC}s per lato` : `${_warmupDurata(w)}s`}</div>
       </div>`;
@@ -3846,7 +3875,7 @@ function _renderWarmupSection(s){
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         <span style="font-size:13px;font-weight:700;color:var(--acc);font-family:var(--font-sans);">Riscaldamento specifico</span>
       </div>
-      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">${items.every(w => !_warmupPerLato(w) && _warmupDurata(w) === WARMUP_WORK_SEC) ? '1 min a esercizio' : 'Il tempo di ogni voce è accanto al nome'} · 10s per cambiare posizione</div>
+      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">10s per cambiare posizione · tocca ⓘ per come si fa</div>
       ${heroHtml}
       ${itemsHtml}
     </div>`;
@@ -5677,11 +5706,18 @@ function _riattivaAudio(){
     } catch(e){ return false; }
   };
   if(ctx.state === 'running') return Promise.resolve(true);
-  if(ctx.state === 'interrupted' || ctx.state === 'closed') return Promise.resolve(rifai());
+  if(ctx.state === 'closed') return Promise.resolve(rifai());
+  // «interrupted» (revisione del 390): al rientro iPhone lo dice ancora per un attimo e spesso lo riprende da solo.
+  // Buttarlo subito lo sostituiva con un contesto che vuole un tocco, e durante un recupero nessuno tocca: i bip del
+  // conto alla rovescia restavano muti. Prima si prova a riprenderlo, e si rifà solo se dopo mezzo secondo non corre.
   // Training 390 (segnalazione 97442813: dopo un messaggio letto in un'altra app il conto alla rovescia non suonava
   // più): al rientro iPhone può lasciare resume() senza risposta. Si aspetta mezzo secondo, poi contesto nuovo.
   const scaduto = new Promise(r => setTimeout(() => r('scaduto'), 500));
-  return Promise.race([_unlockAudio(), scaduto]).then(ok => (ok === true || ctx.state === 'running') ? true : rifai()).catch(rifai);
+  const esito = (ok) => {
+    if(_audioCtx !== ctx) return !!(_audioCtx && _audioCtx.state === 'running');   // un tocco ne ha già fatto uno nuovo: vale quello
+    return (ok === true || ctx.state === 'running') ? true : rifai();
+  };
+  return Promise.race([_unlockAudio(), scaduto]).then(esito).catch(() => esito(false));
 }
 function _unlockAudio(){
   const ctx = _ensureAudioCtx();
@@ -5771,11 +5807,15 @@ function _audioRientro(){
   _audioGestureUnlocked = false;
   _armaSbloccoGesto();
 }
-function _onFirstGesture(){
+function _onFirstGesture(ev){
   if(_audioGestureUnlocked) return;
+  // dopo un rientro si aspetta la fine del tocco (touchend, mousedown, tasto): su iPhone l'inizio del tocco non sempre
+  // vale come gesto per l'audio, e un contesto rifatto lì resterebbe sospeso senza più nessuno in ascolto (revisione)
+  if(_audioDopoRientro && ev && ev.type === 'touchstart') return;
   _audioGestureUnlocked = true;
-  if(_audioDopoRientro && _audioCtx){
-    _audioDopoRientro = false;
+  const daRifare = _audioDopoRientro && _audioCtx && _audioCtx.state !== 'running';   // un contesto che corre non si tocca
+  _audioDopoRientro = false;
+  if(daRifare){
     const vecchio = _audioCtx;
     try { if(vecchio.close) Promise.resolve(vecchio.close()).catch(()=>{}); } catch(e){}
     _audioCtx = null;
