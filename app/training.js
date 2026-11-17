@@ -2754,8 +2754,12 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // ripetizioni (decisione di Ignazio del 17 novembre 2026, doppia progressione: fra un colore e l'altro il salto è
     // grosso, e una serie sola in cima non basta). Si decide alla prima serie della seduta dopo; dentro la seduta la
     // serie dopo non propone mai il salto. Vale per la misura a banda, nei due versi; i carichi in numeri restano com'erano.
-    const serieUltima = (ST.lastSessionSets && ST.lastSessionSets[exName]) || [];
-    const tutteInCima = !!cur && serieUltima.length >= (Number(exData.sets) || 1)
+    // contano le serie prescritte, le prime N per numero: una serie in più fatta per conto proprio (12 · 12 · 12 e una
+    // quarta a 9, con 3 prescritte) non blocca il passaggio (revisione della Regia)
+    const nPrescritte = Number(exData.sets) || 1;
+    const serieUltima = ((ST.lastSessionSets && ST.lastSessionSets[exName]) || []).slice()
+      .sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0)).slice(0, nPrescritte);
+    const tutteInCima = !!cur && serieUltima.length >= nPrescritte
       && serieUltima.every(l => (Number(l.reps) || 0) >= repsMax && _bandaDellaSerie(l) === cur);
     // 0) prima serie di oggi (Training 440): la più forte dell'ultima seduta, uguale (serieDaRipetere); con tutte le
     //    serie in cima, il gradino più duro dal minimo
@@ -4996,7 +5000,7 @@ function renderTraining(){
 
       // Coach insight deterministico, sulla misura dell'esercizio
       const cosa = { carico:'il carico', banda:'la banda', sec:'la tenuta', reps:'le ripetizioni' }[misura.tipo];
-      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda:'Quando arrivi in cima alle ripetizioni, prova la banda più dura.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
+      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda: misura.verso === 'resistenza' ? 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi all\'elastico più duro.' : 'Quando tutte le serie arrivano in cima alle ripetizioni, la volta dopo passi alla banda che aiuta meno.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
       let insightText = 'Registra almeno 3 sessioni per vedere un\'analisi della tua progressione.';
       if(diffTrend != null){
         if(diffTrend > 0) insightText = misura.tipo === 'banda' ? 'Nelle ultime sessioni usi meno assistenza. Sei in progressione — continua così.' : `Nelle ultime sessioni ${cosa === 'le ripetizioni' ? 'le ripetizioni salgono' : cosa + ' sale'}. Sei in progressione — continua così.`;
