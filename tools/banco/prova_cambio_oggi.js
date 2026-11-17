@@ -81,7 +81,7 @@ async function nuovo(o){
     atteso('scelta · la scheda nel database non si tocca', a.supa._calls.filter(c => c.table === 'schede_utente' && c.op !== 'select').length, 0);
     // la serie va sotto l'esercizio scelto
     a.win.openLogModal('upperA', 'Chest press elastico', 1);
-    a.scegli('tl-reps', '8'); a.scegli('tl-rir', '2'); a.ST.trainLogResist = 20;
+    a.scegli('tl-reps', '8'); a.scegli('tl-rir', '2'); a.ST.trainLogBandColor = 'Rossa';   // con l'elastico la serie è a colore (Training 390)
     await a.win.saveTrainingSet();
     const r = a.t.training_logs[a.t.training_logs.length - 1];
     atteso('serie · salvata sotto l\'esercizio scelto, col suo codice', [r.exercise_name, r.exercise_code, r.set_number], ['Chest press elastico', 'EX003', 1]);
@@ -104,7 +104,7 @@ async function nuovo(o){
     atteso('torna a quello · senza serie salvate si torna all\'originale e il telefono si svuota', [a.nomi()[2], a.win.localStorage.getItem(`zt_cambi_oggi_${U}_${OGGI}`)], ['Curl elastico', null]);
     // una serie già fatta sotto la panca, poi il cambio: all'esercizio nuovo restano 2 serie
     a.win.openLogModal('upperA', 'Panca elastico', 1);
-    a.scegli('tl-reps', '8'); a.scegli('tl-rir', '2'); a.ST.trainLogResist = 20;
+    a.scegli('tl-reps', '8'); a.scegli('tl-rir', '2'); a.ST.trainLogBandColor = 'Rossa';
     await a.win.saveTrainingSet();
     await a.win.cambiaPerOggi('upperA', 'Panca elastico', 'EX004');
     atteso('a metà · all\'esercizio scelto restano le serie non fatte', [a.nomi()[0], a.win.findExercise('Piegamenti', 'upperA').sets], ['Piegamenti', 2]);
