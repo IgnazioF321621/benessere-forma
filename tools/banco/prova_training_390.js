@@ -32,7 +32,7 @@ const catalogo = [
   { codice:'EX076', nome:'Rematore manubri panca piana', pattern:'tirata orizzontale', gruppo_target:'dorsali', attrezzo:'manubri;panca', surrogato_attrezzo:'elastico+panca', luogo:'casa;palestra', progressione:'elastico più duro' },
   { codice:'EX900', nome:'Curl manubri', pattern:'isolamento', gruppo_target:'bicipiti', attrezzo:'manubri', luogo:'casa', progressione:'carico' },
   { codice:'EX901', nome:'Piegamenti', pattern:'spinta orizzontale', gruppo_target:'pettorali', attrezzo:'corpo libero', luogo:'casa', progressione:'più ripetizioni' },
-  { codice:'EX505', nome:'Trazioni sbarra assistite elastico', pattern:'tirata verticale', gruppo_target:'dorsali', attrezzo:'sbarra', surrogato_attrezzo:'elastico', luogo:'casa', progressione:'meno assistenza' },
+  { codice:'EX505', nome:'Trazioni sbarra assistite elastico', pattern:'tirata verticale', gruppo_target:'dorsali', attrezzo:'sbarra', surrogato_attrezzo:'elastico', luogo:'casa', progressione:'meno assistenza', nota_sicurezza:'Progressione: passa a un elastico piu sottile quando riesci a fare 10-12 ripetizioni pulite' },
 ];
 // le serie di prima, in libbre, sul Dip (10 novembre)
 const vecchie = [1, 2, 3].map(n => ({ id:'v' + n, user_id:U, date:'2026-11-10', session_id:'upperA', exercise_name:'Dip macchina seduto', exercise_code:'EX513', set_number:n, reps:10, resistance:'160', band_color:null, rir_actual:2 }));
@@ -130,6 +130,23 @@ async function nuovo(logs){
   W.renderTraining();
   const frase = a.doc.querySelector('.te5-numeri.te5-frase');
   atteso('5 · la frase della PROSSIMA nella serie in corso ha la sua classe (più piccola, a capo)', !!frase || !!a.doc.querySelector('.te5-numeri'), true);
+
+  // ── 6 · la nota di progressione prende la soglia dalla seduta ──
+  const NOTA = 'Progressione: passa a un elastico piu sottile quando riesci a fare 10-12 ripetizioni pulite';
+  atteso('6 · in una seduta a 4-6 la nota dice 6 ripetizioni, non 10-12', W._notaPerSeduta(NOTA, { reps:'4-6' }), 'Progressione: passa a un elastico piu sottile quando riesci a fare 6 ripetizioni pulite');
+  atteso('6 · stesso intervallo: com\'è; a tempo o senza intervallo: com\'è', [W._notaPerSeduta(NOTA, { reps:'10-12' }) === NOTA, W._notaPerSeduta(NOTA, { reps:'20-40 sec' }) === NOTA, W._notaPerSeduta(NOTA, {}) === NOTA], [true, true, true]);
+  atteso('6 · nella scheda letta: l\'avviso delle trazioni (4-6) dice 6 ripetizioni', /fare 6 ripetizioni pulite/.test(W.findExercise('Trazioni sbarra assistite elastico', 'upperA').alert || ''), true);
+
+  // ── 7 · il bip dopo essere usciti dall'app: lo sblocco al tocco si riarma a ogni rientro ──
+  const tocco = () => a.doc.dispatchEvent(new W.MouseEvent('mousedown', { bubbles:true }));
+  W._ensureAudioCtx(); tocco();
+  const ctx1 = W.eval('_audioCtx');
+  atteso('7 · dopo il primo tocco lo sblocco è fatto', W.eval('_audioGestureUnlocked'), true);
+  a.doc.dispatchEvent(new W.Event('visibilitychange'));
+  atteso('7 · al rientro lo sblocco al tocco si riarma', [W.eval('_audioGestureUnlocked'), W.eval('_audioDopoRientro')], [false, true]);
+  tocco();
+  const ctx2 = W.eval('_audioCtx');
+  atteso('7 · il primo tocco dopo il rientro rifà il contesto audio dentro il gesto', [ctx2 !== ctx1, ctx1.state, ctx2 && ctx2.state, W.eval('_audioDopoRientro')], [true, 'closed', 'running', false]);
 
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);

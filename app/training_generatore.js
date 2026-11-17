@@ -682,7 +682,7 @@ async function loadActiveScheda() {
           if (t.execution.length)    ex.execution = t.execution;
           if (t.commonErrors.length) ex.commonErrors = t.commonErrors;
           if (t.muscles.length)      ex.muscles = t.muscles;
-          if (conAlert && t.alert)   ex.alert = t.alert;
+          if (conAlert && t.alert)   ex.alert = _notaPerSeduta(t.alert, ex);   // Training 390: la soglia è quella della seduta
           if (riga.spiegazione && String(riga.spiegazione).trim()) ex.spiegazione = String(riga.spiegazione).trim();   // Training 390
           // Training 370: col surrogato, sotto il nome «Con l'elastico al posto del bilanciere», dalla riga di oggi
           const rs = ex.isSurrogato ? ZTCoachRules.testoSurrogato(riga) : '';
@@ -3714,6 +3714,20 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap, ammissibili)
   });
 
   return output;
+}
+
+// La soglia di una nota di progressione è quella della seduta (Training 390, 17 novembre 2026, segnalazione di Ignazio
+// 5c716c89): il catalogo scrive «passa a un elastico più sottile quando riesci a fare 10-12 ripetizioni pulite», ma in una
+// seduta di forza le ripetizioni sono 4-6 e la nota contraddiceva la seduta. È la doppia progressione: si sale quando si
+// arriva in cima alle ripetizioni prescritte, qualunque esse siano (ACSM 2009, Med Sci Sports Exerc 41:687). Un intervallo
+// «N-M ripetizioni» nella nota diventa la cima dell'intervallo dell'esercizio; a tempo, o senza intervallo, la nota resta
+// com'è. Solo in memoria, come gli altri testi: la riga del catalogo si corregge dal foglio.
+function _notaPerSeduta(testo, ex) {
+  const t = String(testo || '');
+  if (!t || !ex || !ex.reps || typeof parseRepsRange !== 'function') return testo;
+  const pr = parseRepsRange(ex.reps);
+  if (!pr || pr.kind === 'seconds' || !(pr.max > 0)) return testo;
+  return t.replace(/\b(\d+)\s*[-–]\s*(\d+)\s+ripetizioni\b/g, (tutto, a, b) => (Number(b) === pr.max && Number(a) === pr.min) ? tutto : `${pr.max} ripetizioni`);
 }
 
 // I TESTI dell'esercizio dalla riga di catalogo (setup, esecuzione, errori, muscoli, alert): una funzione

@@ -1989,7 +1989,7 @@ function _coCostruisci(riga0, orig){
     oggiAlPostoDi: { codice: originale.codice, name: originale.name },
     _originaleOggi: originale,
   };
-  if(testi.alert) nuovo.alert = testi.alert;
+  if(testi.alert) nuovo.alert = _notaPerSeduta(testi.alert, { reps: orig.reps });   // Training 390
   ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });
   if(riga.unilaterale)  nuovo.unilaterale  = String(riga.unilaterale).trim().toLowerCase();
   if(riga.progressione) nuovo.progressione = String(riga.progressione).trim().toLowerCase();
@@ -5678,7 +5678,10 @@ function _riattivaAudio(){
   };
   if(ctx.state === 'running') return Promise.resolve(true);
   if(ctx.state === 'interrupted' || ctx.state === 'closed') return Promise.resolve(rifai());
-  return _unlockAudio().then(ok => ok ? true : (ctx.state === 'running' ? true : rifai())).catch(rifai);
+  // Training 390 (segnalazione 97442813: dopo un messaggio letto in un'altra app il conto alla rovescia non suonava
+  // più): al rientro iPhone può lasciare resume() senza risposta. Si aspetta mezzo secondo, poi contesto nuovo.
+  const scaduto = new Promise(r => setTimeout(() => r('scaduto'), 500));
+  return Promise.race([_unlockAudio(), scaduto]).then(ok => (ok === true || ctx.state === 'running') ? true : rifai()).catch(rifai);
 }
 function _unlockAudio(){
   const ctx = _ensureAudioCtx();
@@ -5728,6 +5731,7 @@ document.addEventListener('visibilitychange', ()=>{
   // il tempo sull'ora vera e, se è scaduto mentre si era altrove, fa suonare subito il bip; se iOS non
   // lascia suonare senza un tocco, il bip resta in sospeso e parte al primo tocco (la vibrazione subito).
   if(document.visibilityState === 'visible'){
+    _audioRientro();   // lo sblocco al tocco si riarma a ogni rientro (Training 390)
     const poi = () => { if(ST.trainCountdown) tickCountdown(); _suonaInSospeso(); };
     if(_audioCtx) _riattivaAudio().then(poi).catch(poi); else poi();
   }
@@ -5758,9 +5762,25 @@ document.addEventListener('visibilitychange', ()=>{
 
 // Sblocco audio one-shot al primo gesto utente (iOS richiede gesture per AudioContext)
 let _audioGestureUnlocked = false;
+// Dopo un rientro da un'altra app (Training 390) il primo tocco rifà il contesto DENTRO il gesto: su iPhone un contesto
+// creato e ripreso dentro un tocco suona sempre, mentre quello di prima può restare muto anche se dice «running».
+let _audioDopoRientro = false;
+function _audioRientro(){
+  if(!_audioCtx) return;
+  _audioDopoRientro = true;
+  _audioGestureUnlocked = false;
+  _armaSbloccoGesto();
+}
 function _onFirstGesture(){
   if(_audioGestureUnlocked) return;
   _audioGestureUnlocked = true;
+  if(_audioDopoRientro && _audioCtx){
+    _audioDopoRientro = false;
+    const vecchio = _audioCtx;
+    try { if(vecchio.close) Promise.resolve(vecchio.close()).catch(()=>{}); } catch(e){}
+    _audioCtx = null;
+    _ensureAudioCtx();
+  }
   _unlockAudio().then(_suonaInSospeso).catch(()=>{});   // il bip rimasto in sospeso (Training 380)
   document.removeEventListener('touchstart', _onFirstGesture, true);
   document.removeEventListener('touchend', _onFirstGesture, true);
