@@ -343,7 +343,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('seduta accesa: il RIR della seduta solo in testata, «Cambia per oggi» non più sulle righe', [se.rirPillole, se.cambia], [0, 0]);
       atteso('seduta accesa: «Inizia» su ogni riga, evidenziato sul prossimo esercizio, un ⋯ per riga', [se.inizia, se.prossimo, se.piu], [['▶ Inizia S1', '▶ Inizia S1'], [true, false], 2]);
       atteso('seduta accesa: il Blocco Attivazione è una riga con «Inizia», l\'elenco chiuso', [se.attivazione.righe, se.attivazione.voci, se.attivazione.tasti.some(t => t === 'Inizia'), se.attivazione.tasti.some(t => /Start/.test(t))], [1, 0, true, false]);
-      atteso('seduta accesa: il ⋯ apre tre voci', sm.menu, ['Cambia per oggi', 'Aggiungi una nota', 'Scheda dell\'esercizio']);
+      atteso('seduta accesa: il ⋯ apre tre voci e «Chiudi» (Training 396)', sm.menu, ['Cambia per oggi', 'Aggiungi una nota', 'Scheda dell\'esercizio', 'Chiudi']);
       atteso('la riga dei numeri: uguale, sale, scende (scarico), una ripetizione in più, la banda, la prima volta, senza obiettivo',
         [unita.uguale.testo, unita.uguale.ultima, unita.sale.testo, unita.sale.ultima, unita.scende.testo, unita.ripetizione, unita.banda, unita.prima, unita.senzaObiettivo],
         ['Come l\'ultima volta · 40 lbs × 10', null, '45 lbs × 10 · +5 lbs rispetto all\'ultima volta', 'Ultima volta · 40 lbs × 10 · RIR 2', '30 lbs × 8 · scarico, −10 lbs, −2 ripetizioni rispetto all\'ultima volta',

@@ -3697,6 +3697,42 @@ function preparaGifRiscaldamento(items){
   });
 }
 
+// Il tic di un flusso a tempo (Training 397, 19 novembre 2026, feedback di Ignazio 06ca6e55: nel Vacuum l'immagine
+// «appare e scompare di continuo»). Ogni secondo la pagina si ridisegnava intera, e l'<img> della GIF rinasceva: la GIF
+// ripartiva dal primo fotogramma e lampeggiava. Come nel recupero fra le serie, il tic aggiorna solo il numero e la barra
+// se sono a schermo; la pagina si ridisegna quando cambia la voce o la fase.
+// → true se ha aggiornato a schermo, false se bisogna ridisegnare
+function _ticTempoDOM(prefisso, remaining, durata, colore){
+  const num = document.getElementById(prefisso + '-tempo');
+  const barra = document.getElementById(prefisso + '-barra');
+  if(!num || !barra) return false;
+  num.textContent = String(Math.floor(remaining / 60)).padStart(2, '0') + ':' + String(remaining % 60).padStart(2, '0');
+  if(colore) num.style.color = colore;
+  barra.style.width = (durata ? Math.round((durata - remaining) / durata * 100) : 0) + '%';
+  return true;
+}
+// Quanto resta aperto il riquadro a tempo scaduto, perché prima suoni il bip e poi si chiuda (Training 397)
+const FINE_FLUSSO_MS = 1200;
+
+// Il menu «⋯» della card dell'esercizio (Training 396, 19 novembre 2026, feedback di Ignazio 0cd848bd: non si chiudeva).
+// Si chiude in tre modi: un altro tocco sui puntini, la riga «Chiudi» in fondo, un tocco fuori dal menu. Il nome
+// dell'esercizio passa da data-ex, non da una stringa dentro l'onclick: con un apostrofo nel nome il confronto falliva.
+function toggleMenuEx5(nome){
+  ST.ex5Menu = (ST.ex5Menu === nome) ? null : nome;
+  if(ST.page === 'training') renderTraining();
+}
+function chiudiMenuEx5(){
+  if(ST.ex5Menu == null) return;
+  ST.ex5Menu = null;
+  if(ST.page === 'training') renderTraining();
+}
+document.addEventListener('click', (ev) => {
+  if(ST.ex5Menu == null) return;
+  const t = ev.target;
+  if(t && t.closest && (t.closest('.ex5-menu') || t.closest('.ex5-piu'))) return;
+  chiudiMenuEx5();
+});
+
 // ── Renderer dedicato per il Blocco Attivazione (countdown ibrido 5 min, valido per tutte le sessioni) ──
 function _renderActivationSection(){
   if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
@@ -3756,7 +3792,7 @@ function _renderActivationSection(){
         <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${nomeCortoConTag(cur.name)}</div>
         ${gifAttivazione(cur) ? `<img class="att-gif" src="${esc(gifAttivazione(cur))}" alt="${esc(cur.name)}" style="display:block;width:100%;max-height:220px;object-fit:contain;background:var(--s1);border-radius:10px;margin-bottom:14px;">` : ''}
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
-          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:var(--acc);line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div id="att-tempo" style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:var(--acc);line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
             <button onclick="activationFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid var(--acc);border-radius:10px;width:44px;height:52px;cursor:pointer;color:var(--acc);font-size:18px;font-weight:700;">⏪</button>
             ${playPauseBtn}
@@ -3764,7 +3800,7 @@ function _renderActivationSection(){
           </div>
         </div>
         <div style="height:6px;background:rgba(42,122,111,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-          <div style="height:100%;width:${pct}%;background:var(--acc);transition:width .35s linear;"></div>
+          <div id="att-barra" style="height:100%;width:${pct}%;background:var(--acc);transition:width .35s linear;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
           <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
@@ -3892,14 +3928,14 @@ function _renderWarmupSection(s){
         ${titleLine}
         ${gifAttivazione(isWork ? cur : next) ? `<img class="warm-gif" src="${esc(gifAttivazione(isWork ? cur : next))}" alt="${esc((isWork ? cur : next).name)}" style="display:block;width:100%;max-height:220px;object-fit:contain;background:var(--s1);border-radius:10px;margin-bottom:14px;">` : ''}
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
-          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:${numColor};font-variant-numeric:tabular-nums;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div id="warm-tempo" style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:${numColor};font-variant-numeric:tabular-nums;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
             ${playPauseBtn}
             <button onclick="warmupFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid ${accentFinal};border-radius:10px;width:44px;height:52px;cursor:pointer;color:${accentFinal};font-size:18px;font-weight:700;">⏩</button>
           </div>
         </div>
         <div style="height:6px;background:rgba(0,0,0,.10);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-          <div style="height:100%;width:${pct}%;background:${accentFinal};transition:width .35s linear;"></div>
+          <div id="warm-barra" style="height:100%;width:${pct}%;background:${accentFinal};transition:width .35s linear;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
           <span>${f.idx+1}/${items.length}</span>
@@ -4403,8 +4439,9 @@ function renderTraining(){
               ${!allDone ? `<button role="menuitem" onclick="event.stopPropagation();ST.ex5Menu=null;apriCambioOggi('${safeSel}','${safeName}')">Cambia per oggi</button>` : ''}
               <button role="menuitem" onclick="event.stopPropagation();ST.ex5Menu=null;openNoteEditor('${safeName}')">Aggiungi una nota</button>
               <button role="menuitem" onclick="event.stopPropagation();ST.ex5Menu=null;openExerciseAI('${safeName}','${safeSel}')">Scheda dell'esercizio</button>
+              <button role="menuitem" class="ex5-menu-chiudi" onclick="event.stopPropagation();chiudiMenuEx5()">Chiudi</button>
             </div>` : '';
-        const piu5 = (v5Seduta && !isOpen) ? `<button class="ex5-piu" aria-label="Altro" aria-expanded="${ST.ex5Menu === e.name}" onclick="event.stopPropagation();ST.ex5Menu=ST.ex5Menu==='${safeName}'?null:'${safeName}';renderTraining();">⋯</button>` : '';
+        const piu5 = (v5Seduta && !isOpen) ? `<button class="ex5-piu" aria-label="Altro" aria-expanded="${ST.ex5Menu === e.name}" data-ex="${esc(e.name)}" onclick="event.stopPropagation();toggleMenuEx5(this.dataset.ex);">⋯</button>` : '';
         // la nota: a veste accesa il blocco si vede solo se c'è (o si sta scrivendo), «Aggiungi una nota» sta nel ⋯
         const notaHTML = (v5Seduta && !ST.trainNotes[e.name] && ST.trainNoteEditing !== e.name) ? '' : _renderTrainNoteBlock(e.name);
         return `
@@ -5283,8 +5320,13 @@ function renderTraining(){
               <div class="rest-hero-cd-num" style="color:${numColor};">${cdDisplay}</div>
             </div>
             <div class="rest-hero-right">
-              <button class="rest-hero-skip" onclick="skipCountdown()">Salta ⏭</button>
-              <button class="rest-hero-riduci" onclick="riduciCountdown()" aria-label="Riduci il foglio" title="Riduci: il tempo continua" style="display:block;margin:6px 0 0 auto;background:none;border:1px solid var(--s3);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--t2);cursor:pointer;">⌄ riduci</button>
+              <!-- Training 395 (19 novembre 2026, feedback 6bb520a8): «Salta» e «riduci» sulla stessa riga, uguali nel recupero
+                   fra le serie e in quello fra due esercizi, a sinistra dell'insetto «Invia Feedback» (che col recupero aperto
+                   sale in alto a destra e copriva «riduci») -->
+              <div class="rest-hero-tasti">
+                <button class="rest-hero-skip" onclick="skipCountdown()">Salta ⏭</button>
+                <button class="rest-hero-riduci" onclick="riduciCountdown()" aria-label="Riduci il foglio" title="Riduci: il tempo continua">⌄ riduci</button>
+              </div>
               ${gifHTML}
               <span class="rest-hero-cd-label">${cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
             </div>
@@ -6469,20 +6511,32 @@ function _activationFlowAdvance(){
       try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
       try{ playStopBeep(); }catch(e){}
     }
-    _activationAutoCollapse();
+    // a metà del blocco il riquadro non si chiude (Training 397): con le tre voci già spuntate a mano si chiudeva da
+    // solo mentre il tempo correva. Qui si salva soltanto; si chiude alla fine.
+    _persistActivation();
   }
-  f.currentIdx++;
-  if(f.currentIdx >= ACTIVATION_BLOCK.length){
-    // Fine attivazione
+  if(f.currentIdx + 1 >= ACTIVATION_BLOCK.length){
+    // Fine attivazione: prima il bip (qui sopra), poi la chiusura. Il riquadro resta aperto sullo 00:00 per
+    // FINE_FLUSSO_MS; in silenzio (rientro da un'altra app con più fasi scadute) si chiude subito.
     _activationFlowClearInterval();
-    f.active = false;
     f.running = false;
     f.remaining = 0;
-    checkActivationSessionDone();
-    _activationAutoCollapse();
+    const chiudi = () => {
+      if(!f.finendo) return;
+      f.finendo = false;
+      f.currentIdx = ACTIVATION_BLOCK.length;
+      f.active = false;
+      checkActivationSessionDone();
+      _activationAutoCollapse();
+      if(ST.page === 'training') renderTraining();
+    };
+    f.finendo = true;
+    if(f._silent){ const nr = f._noRender; f._noRender = true; chiudi(); f._noRender = nr; return; }
     if(!f._noRender) renderTraining();
+    setTimeout(chiudi, FINE_FLUSSO_MS);
     return;
   }
+  f.currentIdx++;
   const next = ACTIVATION_BLOCK[f.currentIdx];
   f.remaining = next.seconds || 60;
   f.endTime = base + f.remaining * 1000; // catena senza drift dalla fase precedente
@@ -6506,7 +6560,11 @@ function _activationFlowTick(){
     f.prepBeeped[remaining] = true;
     try{ playPrepBeep(); }catch(e){}
   }
-  if(remaining > 0){ renderTraining(); return; }
+  if(remaining > 0){
+    const curA = ACTIVATION_BLOCK[f.currentIdx];
+    if(!_ticTempoDOM('att', remaining, (curA && curA.seconds) || 60)) renderTraining();
+    return;
+  }
   // Fase scaduta: avanza. Se in background sono scadute anche fasi successive,
   // avanzale in silenzio (niente raffica di beep), poi un solo render.
   // late = confine di fase superato da >1.5s (rientro da background): il LONG "GO"
@@ -6549,7 +6607,7 @@ function activationFlowPause(){
 }
 function activationFlowResume(){
   if(ST.trainActivationFlow.running) return;
-  if(!ST.trainActivationFlow.active) return;
+  if(!ST.trainActivationFlow.active || ST.trainActivationFlow.finendo) return;
   // Mutual exclusion: non riprendere se recovery / warm-up flow è running
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
   if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
@@ -6560,11 +6618,11 @@ function activationFlowResume(){
   renderTraining();
 }
 function activationFlowSkip(){
-  if(!ST.trainActivationFlow.active) return;
+  if(!ST.trainActivationFlow.active || ST.trainActivationFlow.finendo) return;
   _activationFlowAdvance();
 }
 function activationFlowBack(){
-  if(!ST.trainActivationFlow.active) return;
+  if(!ST.trainActivationFlow.active || ST.trainActivationFlow.finendo) return;
   if(ST.trainActivationFlow.currentIdx <= 0){
     if(ACTIVATION_BLOCK[0]) ST.trainActivationFlow.remaining = ACTIVATION_BLOCK[0].seconds || 60;
     ST.trainActivationFlow.endTime = Date.now() + ST.trainActivationFlow.remaining * 1000;
@@ -6580,6 +6638,7 @@ function activationFlowBack(){
   renderTraining();
 }
 function activationFlowEnd(){
+  ST.trainActivationFlow.finendo = false;
   _activationFlowClearInterval();
   ST.trainActivationFlow.active = false;
   ST.trainActivationFlow.running = false;
@@ -7238,7 +7297,14 @@ function _warmupFlowTick(){
     f.prepBeeped[remaining] = true;
     try { playPrepBeep(); } catch(e){}
   }
-  if(remaining > 0){ renderTraining(); return; }
+  if(remaining > 0){
+    // Training 397: il tic aggiorna solo il tempo e la barra, la GIF della voce resta dov'è
+    const pausaLato = f.phase === 'work' && f.isoPhase === 'pause';
+    const durata = pausaLato ? WARMUP_ISO_PAUSE_SEC : (f.phase === 'work' && f.isoPhase) ? WARMUP_ISO_SIDE_SEC
+      : f.phase === 'work' ? _warmupDurata(_warmupFlowCurrentItem()) : WARMUP_REST_SEC;
+    if(!_ticTempoDOM('warm', remaining, durata, (!pausaLato && remaining <= 5) ? '#B84C2A' : null)) renderTraining();
+    return;
+  }
   // Fase scaduta: avanza. Fasi intere saltate in background → avanzamento silenzioso
   // (lo STOP suona solo per la prima fase; LONG stantio soppresso; niente raffica),
   // poi un solo render.
@@ -7300,6 +7366,7 @@ function warmupFlowPause(){
   renderTraining();
 }
 function warmupFlowResume(){
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.finendo) return;   // a tempo scaduto il riquadro aspetta solo di chiudersi (Training 397)
   const f = ST.trainWarmupFlow;
   if(!f || !f.active) return;
   // Mutua esclusione: non riprendere se attivazione / recupero sono in corso
@@ -7313,10 +7380,12 @@ function warmupFlowResume(){
 }
 function warmupFlowSkip(){
   const f = ST.trainWarmupFlow;
-  if(!f || !f.active) return;
+  if(!f || !f.active || f.finendo) return;
   f.isoPhase = null; // salta tutta la sequenza iso, avanza normalmente
   f.remaining = 0;
+  f._saltata = true;   // chi salta l'ultima voce non aspetta la chiusura (Training 397)
   _warmupFlowAdvance();
+  if(ST.trainWarmupFlow === f) f._saltata = false;
 }
 function warmupFlowEnd(){
   _warmupFlowClearInterval();
@@ -7326,10 +7395,19 @@ function warmupFlowEnd(){
 function _warmupFlowEndCompleted(){
   _warmupFlowClearInterval();
   try { if(navigator.vibrate) navigator.vibrate([300,100,300]); } catch(e){}
-  showToast('Riscaldamento completato', '✓');
-  ST.trainWarmupFlow = null;
-  ST.trainWarmupCollapsed = true; // collassa in riga compatta riapribile (come l'attivazione)
-  renderTraining();
+  const f = ST.trainWarmupFlow;
+  const chiudi = () => {
+    if(ST.trainWarmupFlow !== f) return;   // nel frattempo «termina» o un altro avvio
+    showToast('Riscaldamento completato', '✓');
+    ST.trainWarmupFlow = null;
+    ST.trainWarmupCollapsed = true; // collassa in riga compatta riapribile (come l'attivazione)
+    if(ST.page === 'training') renderTraining();
+  };
+  // Training 397: prima il bip di fine (lo suona il tic), poi la chiusura. Il riquadro resta aperto sullo 00:00 per
+  // FINE_FLUSSO_MS; in silenzio (più fasi scadute mentre si era in un'altra app) o saltando l'ultima voce si chiude subito.
+  if(!f || f._silent || f._saltata){ chiudi(); return; }
+  f.running = false; f.remaining = 0; f.finendo = true;
+  setTimeout(chiudi, FINE_FLUSSO_MS);
 }
 // Toggle collasso card warm-up (riga compatta ↔ card piena). In-memory.
 function toggleWarmupCollapsed(){

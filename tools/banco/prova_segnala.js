@@ -153,7 +153,8 @@ async function nuovo(conSessione) {
   atteso('serie in corso · l\'insetto sale e «dove sei» dice la serie', [a.insetto().classList.contains('in-foglio'), a.win.doveSono().fogli], [true, ['SERIE 2 / 4 · IN CORSO']]);
   serie.remove(); await fotogramma();
   atteso('serie chiusa · l\'insetto torna in basso', a.insetto().classList.contains('in-foglio'), false);
-  atteso('stile · «Salta ⏭» si sposta a sinistra di 36 px (l\'area sicura del recupero è della sessione Training, non di qui)', /margin-right:36px/.test(regola('.rest-hero-skip')), true);
+  // dal Training 395 «Salta» e «riduci» stanno in una riga (.rest-hero-tasti) che lascia l'angolo all'insetto
+  atteso('stile · la riga di «Salta» e «riduci» si ferma prima dell\'angolo dell\'insetto (margine a destra)', /margin-right:30px/.test(regola('.rest-hero-tasti')), true);
   atteso('stile · la serie in corso lascia 50 px a destra nell\'intestazione («‹ Indietro» non sta più nell\'angolo)', /padding:calc\(env\(safe-area-inset-top\) \+ 14px\) 50px 12px 18px/.test(regola('.train-exec-header')), true);
   a.win.foglioSegnala(); await fotogramma();
   atteso('il foglio del feedback da solo non fa salire l\'insetto', [!!a.foglio(), a.insetto().classList.contains('in-foglio')], [true, false]);

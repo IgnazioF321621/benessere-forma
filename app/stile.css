@@ -716,8 +716,17 @@ div.ex-media-vuoto{display:flex;align-items:center;justify-content:center;text-a
   cursor:pointer;
   padding:6px 8px;
   border-radius:6px;
-  align-self:flex-end;
-  margin-right:36px; /* Fondamenta 240: lascia l'angolo all'insetto «Invia Feedback», che col recupero aperto sale in alto a destra */
+}
+/* Training 395: «Salta» e «riduci» in una riga sola, e l'angolo in alto a destra resta dell'insetto «Invia Feedback»
+   (34 px a 8 px dal bordo, Fondamenta 240): la riga si ferma 44 px prima del bordo del riquadro */
+.rest-hero-tasti{
+  display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+  align-self:stretch;
+  margin-right:30px;
+}
+.rest-hero-riduci{
+  background:none; border:1px solid var(--s3); border-radius:999px;
+  padding:4px 10px; font-size:11px; font-weight:700; font-family:var(--font-mono); color:var(--t2); cursor:pointer;
 }
 .rest-hero-skip:hover{color:var(--acc);background:var(--acc-lt);}
 /* GIF hero recupero: ingrandita verticalmente (26 mag 2026, micro-fix post-2A).
@@ -2749,8 +2758,8 @@ html.v5 :is(.rest-hero-cd-label,.rest-hero-skip){color:var(--z-testo);}
 /* il numero: bianco; negli ultimi 10 secondi l'app lo scalda verso il rosso (colore scritto nell'HTML, rgb(…)): resta quel colore, su una pastiglia bianca */
 html.v5 .rest-hero-cd-num[style*="var(--acc)"]{color:var(--z-testo)!important;}
 html.v5 .rest-hero-cd-num[style*="rgb("]{padding:2px 8px;border-radius:10px;background:var(--bianco);}
-html.v5 .rest-hero-skip{min-height:44px;}
-html.v5 .rest-hero-riduci{min-height:32px;background:rgba(var(--bianco-rgb),.2)!important;color:var(--z-testo)!important;border-color:transparent!important;}
+html.v5 .rest-hero-skip{min-height:44px;padding:4px 12px;border-radius:999px;background:rgba(var(--bianco-rgb),.2);}
+html.v5 .rest-hero-riduci{min-height:44px;background:rgba(var(--bianco-rgb),.2)!important;color:var(--z-testo)!important;border-color:transparent!important;}
 html.v5 .rest-hero-gif-placeholder{background:rgba(var(--bianco-rgb),.14);color:var(--z-testo);}
 /* il registro: tre domande numerate, campi bianchi, «Salva serie» a tutta larghezza nel blu */
 html.v5 .tl5-registro .sez5{margin:4px 2px 0;}
