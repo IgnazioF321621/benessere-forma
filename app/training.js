@@ -96,10 +96,11 @@ function bandaDi(exName, sessionId, ex0){
   const via = (info && info.progressione) || ex.progressione || null;
   const elastico = parole.includes('elastico');
   if(elastico && via === 'meno assistenza') return 'assistenza';
-  // con un attrezzo scritto serve l'elastico (o la sua barra); la sola via «elastico più duro» vale per le schede
-  // vecchie senza attrezzo (revisione: «Rematore manubri» senza eq, coi manubri, avrebbe potuto scrivere solo un colore)
-  if(elastico || parole.includes('barra')) return 'resistenza';
-  return (!parole.length && via === 'elastico più duro') ? 'resistenza' : null;
+  // Training 393 (19 novembre 2026, decisione di Ignazio): l'elastico come RESISTENZA torna in libbre. Gli elastici a
+  // tubo hanno le libbre stampate, e il colore lì era sbagliato: rematore, alzate, curl e gli altri si registrano col
+  // carico in numeri e la progressione di prima del 390. Il colore resta solo dove l'elastico AIUTA (qui sopra e le
+  // trazioni), con la doppia progressione (391) e la cima allargata (392).
+  return null;
 }
 // La banda scritta in una serie (band_color, o il colore finito in resistance), o null
 function _bandaDellaSerie(l){
@@ -1185,7 +1186,8 @@ function progMisura(exName, logs){
   // fuori dalla scheda (i complementari ruotano a ogni blocco) il verso non si sa più: se le serie hanno un colore
   // e non è una trazione, era l'elastico come resistenza, salvo un «Corpo libero» scritto (assistenza)
   const conColore = (logs || []).filter(l => _bandaDellaSerie(l));
-  const verso = bandaDi(exName) || (conColore.length ? (conColore.some(l => _bandaDellaSerie(l) === BAND_FREE) ? 'assistenza' : 'resistenza') : null);
+  const found0 = findExInAllSessions(exName);
+  const verso = bandaDi(exName) || (conColore.length && !(found0 && found0.ex) ? 'assistenza' : null);   // fuori dalla scheda, con serie a colore: era un esercizio assistito (dal 393 il colore è solo dell'assistenza)
   if(verso){
     const scala = scalaBanda(verso);
     const pos = (l) => { const b = _bandaDellaSerie(l); return b ? scala.indexOf(b) : -1; };
@@ -5479,7 +5481,7 @@ function renderTraining(){
         const isTimed = isTimedExerciseByName(exName);
         const repsLbl = isTimed ? 'sec' : 'r';
         const pullUpEx = isPullUpExercise(exName);
-        const versoEx = bandaDi(exName) || (pullUpEx ? 'assistenza' : (logs.some(l => _bandaDellaSerie(l) === BAND_FREE) ? 'assistenza' : 'resistenza'));
+        const versoEx = bandaDi(exName) || 'assistenza';   // dal 393 il colore è solo dell'assistenza
         const rows = logs.map(l => {
           // a colore le trazioni e le serie che hanno un colore (Training 390); le serie in numeri restano in numeri
           const isPullUpEx = pullUpEx || !!_bandaDellaSerie(l);

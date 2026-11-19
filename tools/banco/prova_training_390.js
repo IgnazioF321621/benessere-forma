@@ -58,83 +58,78 @@ async function nuovo(logs){
 }
 
 (async () => {
-  // ── 1 · chi si misura a banda, e in che verso ──
+  // ── 1 · chi si misura a banda: solo dove l'elastico AIUTA (Training 393, 19 novembre 2026) ──
+  // L'elastico come resistenza è tornato in libbre (gli elastici a tubo hanno le libbre stampate): bandaDi dice null.
   const a = await nuovo(vecchie);
   const { W, ST } = a;
   const verso = (n) => W.bandaDi(n, 'upperA');
-  atteso('1 · surrogato elastico (Dip macchina) e «elastico+panca» (Rematore): resistenza', [verso('Dip macchina seduto'), verso('Rematore manubri panca piana')], ['resistenza', 'resistenza']);
+  atteso('1 · elastico come resistenza (Dip col surrogato, Rematore «elastico+panca»): niente banda, libbre', [verso('Dip macchina seduto'), verso('Rematore manubri panca piana')], [null, null]);
   atteso('1 · piegamenti assistiti: assistenza, dal catalogo di oggi anche se la scheda dice ancora «elastico più duro»', verso('Piegamenti assistiti elastico'), 'assistenza');
   atteso('1 · trazioni: assistenza, come sempre; manubri e corpo libero: niente banda', [verso('Trazioni sbarra assistite elastico'), verso('Curl manubri'), verso('Piegamenti')], ['assistenza', null, null]);
-  atteso('1 · «elastico+manubri» no; via «elastico più duro» con la sola panca no, senza attrezzo scritto sì; la barra è l\'accessorio degli elastici', [W.bandaDi('X', null, { eq:'elastico+manubri' }), W.bandaDi('X', null, { eq:'panca', progressione:'elastico più duro' }), W.bandaDi('X', null, { progressione:'elastico più duro' }), W.bandaDi('X', null, { eq:'barra', progressione:'elastico più duro' }), W.bandaDi('X', null, { eq:'elastico;manubri', progressione:'carico' })], [null, null, 'resistenza', 'resistenza', null]);
-  atteso('1 · le due scale, dal più facile al più duro', [W.scalaBanda('resistenza'), W.scalaBanda('assistenza')], [['Gialla', 'Rossa', 'Nera', 'Viola'], ['Viola', 'Nera', 'Rossa', 'Gialla', 'Corpo libero']]);
+  atteso('1 · ogni altro elastico: niente banda (anche con via «elastico più duro», con la barra, senza attrezzo scritto)', [W.bandaDi('X', null, { eq:'elastico', progressione:'elastico più duro' }), W.bandaDi('X', null, { eq:'barra', progressione:'elastico più duro' }), W.bandaDi('X', null, { progressione:'elastico più duro' }), W.bandaDi('X', null, { eq:'elastico+manubri' })], [null, null, null, null]);
+  atteso('1 · «meno assistenza» senza elastico nell\'attrezzo (gravitron in palestra): niente banda', W.bandaDi('X', null, { eq:'macchina', progressione:'meno assistenza' }), null);
+  atteso('1 · la scala dell\'assistenza, dal più facile al più duro', W.scalaBanda('assistenza'), ['Viola', 'Nera', 'Rossa', 'Gialla', 'Corpo libero']);
 
-  // ── 2 · la PROSSIMA, nei due versi ──
+  // ── 2 · la PROSSIMA ──
   const sess = W.getTrainingSession('upperA');
   const pr = (nome, reps, rir, bandColor) => W.computeNextSetSuggestion({ sessionId:'upperA', exName:nome, setNum:1, reps, resistance:'', rir, exData:W.findExercise(nome, 'upperA'), sess, bandColor, struttura:true });
-  const DIP = 'Dip macchina seduto', PIEG = 'Piegamenti assistiti elastico';
-  atteso('2 · resistenza, in cima col RIR a posto, dentro la seduta: stesso elastico, niente salto di colore', [pr(DIP, 12, 2, 'Gialla').testo, pr(DIP, 12, 2, 'Gialla').bandColor], ['S2: elastico giallo · resta a 12 reps · RIR 2', 'Gialla']);
-  // il colore dopo solo quando TUTTE le serie dell'ultima seduta sono in cima (decisione di Ignazio del 17/11)
-  const prima1 = (nome, serie, banda) => { ST.lastSessionSets = { [nome]: serie.map((r, i) => ({ reps:r, band_color:banda, rir_actual:2, set_number:i + 1 })) }; const o = W.computeNextSetSuggestion({ sessionId:'upperA', exName:nome, setNum:0, reps:Math.max(...serie), resistance:'', rir:2, exData:W.findExercise(nome, 'upperA'), sess, bandColor:banda, struttura:true, primaSerie:true }); ST.lastSessionSets = {}; return [o.testo, o.bandColor]; };
-  atteso('2 · prima serie, l\'ultima volta 12 · 12 · 12 sul giallo: si passa al rosso, dal minimo', prima1(DIP, [12, 12, 12], 'Gialla'), ['S1: elastico rosso (più duro) · riparti da 8 reps · RIR 2', 'Rossa']);
-  atteso('2 · prima serie, l\'ultima volta 12 · 12 · 10: resta il giallo, si ripete la più forte', prima1(DIP, [12, 12, 10], 'Gialla'), ['S1: elastico giallo · 12 reps · RIR 2', 'Gialla']);
-  atteso('2 · prima serie, solo due serie su tre fatte, tutte e due in cima: non basta', prima1(DIP, [12, 12], 'Gialla'), ['S1: elastico giallo · 12 reps · RIR 2', 'Gialla']);
-  atteso('2 · assistenza, tutte in cima sulla rossa: meno aiuto, la gialla; trazioni uguale (4-6: 6 · 6 · 6)', [prima1(PIEG, [12, 12, 12], 'Rossa'), prima1('Trazioni sbarra assistite elastico', [6, 6, 6], 'Rossa')], [['S1: banda Gialla (più dura) · riparti da 8 reps · RIR 2', 'Gialla'], ['S1: banda Gialla (più dura) · riparti da 4 reps · RIR 2', 'Gialla']]);
-  atteso('2 · una quarta serie in più a 9, con 3 prescritte e 12 · 12 · 12: il colore sale lo stesso', prima1(DIP, [12, 12, 12, 9], 'Gialla'), ['S1: elastico rosso (più duro) · riparti da 8 reps · RIR 2', 'Rossa']);
-  atteso('2 · già sul viola con tutte in cima: resta il viola', prima1(DIP, [12, 12, 12], 'Viola'), ['S1: elastico viola · 12 reps · RIR 2', 'Viola']);
-  atteso('2 · resistenza, già sul viola: si sale di ripetizioni', pr(DIP, 12, 2, 'Viola').testo, 'S2: elastico viola · sali a 13 reps · RIR 2');
-  atteso('2 · resistenza, sotto il minimo: l\'elastico più leggero; sul giallo si resta', [pr(DIP, 6, 1, 'Nera').testo, pr(DIP, 6, 1, 'Gialla').testo], ['S2: elastico rosso (più leggero) · punta a 8 reps · RIR 2', 'S2: elastico giallo · punta a 8 reps · RIR 2']);
-  atteso('2 · resistenza, in mezzo: stesso elastico, una ripetizione in più', [pr(DIP, 10, 2, 'Rossa').testo, pr(DIP, 10, 2, 'Rossa').bandColor], ['S2: elastico rosso · 11 reps · RIR 2', 'Rossa']);
-  atteso('2 · resistenza, senza un colore scritto: lo sceglie la persona, niente libbre', [pr(DIP, 12, 2, null).testo, pr(DIP, 12, 2, null).bandColor, pr(DIP, 12, 2, null).resistance], ['S2: scegli l\'elastico · resta a 12 reps · RIR 2', null, null]);
+  const lbs = (nome, reps, rir, resistance) => W.computeNextSetSuggestion({ sessionId:'upperA', exName:nome, setNum:1, reps, resistance, rir, exData:W.findExercise(nome, 'upperA'), sess });
+  const DIP = 'Dip macchina seduto', PIEG = 'Piegamenti assistiti elastico', REM = 'Rematore manubri panca piana';
+  atteso('2 · elastico come resistenza, in cima col RIR a posto: un passo in libbre, come prima del 390', [lbs(DIP, 12, 2, '160'), lbs(REM, 12, 2, '30')], ['S2: elastico più duro: 170 lbs · riparti da 8 reps · RIR 2', 'S2: elastico più duro: 40 lbs · riparti da 8 reps · RIR 2']);
+  atteso('2 · elastico come resistenza, in mezzo: stesso carico, una ripetizione in più', lbs(DIP, 10, 2, '160'), 'S2: 160 lbs · 11 reps · RIR 2');
+  atteso('2 · manubri: in libbre, come sempre', lbs('Curl manubri', 12, 2, '20'), 'S2: 30 lbs · riparti da 8 reps · RIR 2');
   atteso('2 · assistenza (piegamenti assistiti), in cima dentro la seduta: stessa banda', [pr(PIEG, 12, 2, 'Rossa').testo, pr(PIEG, 12, 2, 'Gialla').testo], ['S2: banda Rossa · resta a 12 reps · RIR 2', 'S2: banda Gialla · resta a 12 reps · RIR 2']);
   atteso('2 · assistenza, sotto il minimo: più aiuto', pr(PIEG, 6, 1, 'Rossa').testo, 'S2: banda Nera (più aiuto) · punta a 8 reps · RIR 2');
-  atteso('2 · trazioni: in cima dentro la seduta stessa banda; sotto il minimo più aiuto, come prima', [pr('Trazioni sbarra assistite elastico', 6, 2, 'Rossa').testo, pr('Trazioni sbarra assistite elastico', 3, 1, 'Rossa').testo], ['S2: banda Rossa · resta a 6 reps · RIR 2', 'S2: banda Nera (più aiuto) · punta a 4 reps · RIR 2']);
-  atteso('2 · manubri: in libbre, come prima', W.computeNextSetSuggestion({ sessionId:'upperA', exName:'Curl manubri', setNum:1, reps:12, resistance:'20', rir:2, exData:W.findExercise('Curl manubri', 'upperA'), sess }), 'S2: 30 lbs · riparti da 8 reps · RIR 2');
+  atteso('2 · trazioni: in cima dentro la seduta stessa banda; sotto il minimo più aiuto', [pr('Trazioni sbarra assistite elastico', 6, 2, 'Rossa').testo, pr('Trazioni sbarra assistite elastico', 3, 1, 'Rossa').testo], ['S2: banda Rossa · resta a 6 reps · RIR 2', 'S2: banda Nera (più aiuto) · punta a 4 reps · RIR 2']);
+  // il colore dopo solo quando TUTTE le serie dell'ultima seduta sono in cima (Training 391), solo per l'assistenza
+  const prima1 = (nome, serie, banda) => { ST.lastSessionSets = { [nome]: serie.map((r, i) => ({ reps:r, band_color:banda, rir_actual:2, set_number:i + 1 })) }; ST.storiaSerie = {}; const o = W.computeNextSetSuggestion({ sessionId:'upperA', exName:nome, setNum:0, reps:Math.max(...serie), resistance:'', rir:2, exData:W.findExercise(nome, 'upperA'), sess, bandColor:banda, struttura:true, primaSerie:true }); ST.lastSessionSets = {}; return [o.testo, o.bandColor]; };
+  atteso('2 · assistenza, 12 · 12 · 12 sulla rossa: meno aiuto, la gialla, dal minimo; trazioni uguale (6 · 6 · 6)', [prima1(PIEG, [12, 12, 12], 'Rossa'), prima1('Trazioni sbarra assistite elastico', [6, 6, 6], 'Rossa')], [['S1: banda Gialla (più dura) · riparti da 8 reps · RIR 2', 'Gialla'], ['S1: banda Gialla (più dura) · riparti da 4 reps · RIR 2', 'Gialla']]);
+  atteso('2 · assistenza, 12 · 12 · 10: resta la rossa; due serie su tre: non basta; una quarta a 9 non blocca', [prima1(PIEG, [12, 12, 10], 'Rossa')[1], prima1(PIEG, [12, 12], 'Rossa')[1], prima1(PIEG, [12, 12, 12, 9], 'Rossa')[1]], ['Rossa', 'Rossa', 'Gialla']);
+  atteso('2 · assistenza, dalla gialla con tutte in cima: a corpo libero; a corpo libero si resta', [prima1(PIEG, [12, 12, 12], 'Gialla')[1], prima1(PIEG, [12, 12, 12], 'Corpo libero')[1]], ['Corpo libero', 'Corpo libero']);
 
-  atteso('2 · via «più ripetizioni» con l\'elastico: stesso elastico, si sale di ripetizioni (Training 320)', W.computeNextSetSuggestion({ sessionId:'upperA', exName:'Y', setNum:1, reps:12, resistance:'', rir:2, exData:{ sets:3, reps:'8-12', eq:'elastico', progressione:'più ripetizioni' }, sess, bandColor:'Gialla' }), 'S2: elastico giallo · più ripetizioni · sali a 13 reps · RIR 2');
-  atteso('2 · una serie in numeri e una a colore non si confrontano (niente ▲ falso)', W._confrontaSerie('Dip macchina seduto', { reps:8, band_color:'Rossa' }, { reps:10, resistance:'160' }), 0);
-  atteso('2 · fuori dalla scheda, con serie a colore: la misura resta la banda', W.progMisura('Esercizio uscito', [{ reps:10, resistance:'160' }, { reps:9, band_color:'Rossa' }]).tipo, 'banda');
-  // ── 3 · le serie di prima, in libbre, restano storiche ──
+  // ── 3 · lo storico in libbre dell'elastico come resistenza si riprende com'era ──
   const o = W.obiettivoPrimaSerie(DIP, 'upperA');
-  atteso('3 · obiettivo della prima serie dopo uno storico in libbre: le ripetizioni, e l\'elastico lo sceglie la persona', [o && o.testo, o && o.bandColor, o && o.resistance], ['S1: scegli l\'elastico · 10 reps · RIR 2', null, null]);
-  const r5 = W.rigaNumeriV5(DIP, 'upperA');
-  atteso('3 · la riga dei numeri dice l\'ultima volta com\'era, in libbre', [r5 && r5.ultima, /scegli l'elastico/.test((r5 && r5.testo) || '')], ['Ultima volta · 160 lbs × 10 · RIR 2', true]);
-  atteso('3 · la misura con le sole serie in libbre resta il carico (grafico e riepilogo di prima)', W.progMisura(DIP, vecchie).tipo, 'carico');
+  atteso('3 · obiettivo della prima serie del Dip con l\'elastico: le 160 lbs dell\'ultima volta', [o && o.testo, o && o.bandColor, o && o.resistance], ['S1: 160 lbs · 10 reps · RIR 2', null, 160]);
+  atteso('3 · la misura del Dip è il carico', W.progMisura(DIP, vecchie).tipo, 'carico');
+  // una serie salvata a colore nei giorni del 390 (la Regia le corregge nel database): non cambia la misura né il registro
+  atteso('3 · con una serie a colore rimasta nello storico la misura resta il carico', W.progMisura(DIP, [...vecchie, { date: OGGI, reps: 10, resistance: null, band_color: 'Rossa' }]).tipo, 'carico');
 
   // ── 4 · il registro e il salvataggio ──
   W.openLogModal('upperA', DIP, 1);
   W.renderTraining();
-  atteso('4 · il registro: «ELASTICO», i quattro colori, niente «Corpo libero», niente tendina delle libbre', [(a.doc.querySelector('.band-picker-resistenza label') || {}).textContent, [...a.doc.querySelectorAll('.band-picker-resistenza button')].map(b => b.textContent.trim()), !!a.doc.getElementById('tl-resist')], ['ELASTICO', ['Giallo', 'Rosso', 'Nero', 'Viola'], false]);
+  atteso('4 · il registro del Dip con l\'elastico: la tendina delle libbre, già sulle 160, niente colori', [!!a.doc.getElementById('tl-resist'), ST.trainLogResist, !!a.doc.querySelector('.band-picker-resistenza'), ST.trainLogBandColor], [true, 160, false, null]);
   const scegli = (id, v) => { const el = a.doc.getElementById(id); el.value = v; el.dispatchEvent(new W.Event('change', { bubbles:true })); };
   scegli('tl-reps', '10'); scegli('tl-rir', '2');
-  const prima = a.t.training_logs.length;
-  await W.saveTrainingSet();
-  atteso('4 · senza un colore la serie non si salva', a.t.training_logs.length - prima, 0);
-  ST.trainLogBandColor = 'Rossa';
   await W.saveTrainingSet();
   const riga = a.t.training_logs[a.t.training_logs.length - 1];
-  atteso('4 · la serie si salva a colore: band_color scritto, resistance vuota', [riga.exercise_code, riga.band_color, riga.resistance, riga.reps], ['EX513', 'Rossa', null, 10]);
+  atteso('4 · la serie si salva in libbre: resistance scritta, band_color vuoto', [riga.exercise_code, riga.resistance, riga.band_color, riga.reps], ['EX513', '160', null, 10]);
   atteso('4 · le tre serie di prima non sono state toccate', [a.t.training_logs.filter(l => l.date === '2026-11-10').map(l => [l.resistance, l.band_color]), a.supa._calls.filter(c => c.table === 'training_logs' && (c.op === 'update' || c.op === 'delete')).length], [[['160', null], ['160', null], ['160', null]], 0]);
   if(ST.trainCountdown) W.skipCountdown();
-  W.openLogModal('upperA', DIP, 2);
-  atteso('4 · la serie dopo riapre sull\'elastico appena usato', ST.trainLogBandColor, 'Rossa');
   ST.trainLogOpen = null;
-  // da quando c'è una serie a colore la misura è la banda, e conta solo quelle
-  const tutte = [...vecchie, { date: OGGI, reps: 10, resistance: null, band_color: 'Rossa' }, { date: OGGI, reps: 9, resistance: null, band_color: 'Nera' }];
-  const m = W.progMisura(DIP, tutte);
-  atteso('4 · misura dopo il passaggio: banda, verso resistenza, solo le serie a colore, la più forte è la nera', [m.tipo, m.verso, W._serieDellaMisura(m, tutte).length, W.bestSetOfDay(W._serieDellaMisura(m, tutte), m).band_color, m.testo(m.valore({ band_color:'Nera' }))], ['banda', 'resistenza', 2, 'Nera', 'elastico nero']);
-  // piegamenti assistiti: il selettore è quello dell'assistenza, con «Corpo libero»
+  // piegamenti assistiti: il selettore dell'assistenza, e la serie a colore
   W.openLogModal('upperA', PIEG, 1);
   W.renderTraining();
-  atteso('4 · piegamenti assistiti: il selettore dell\'assistenza, con «Corpo libero»', [/ASSISTENZA/.test(testo(a.doc.getElementById('page-training').innerHTML)), /Corpo libero/.test(testo(a.doc.getElementById('page-training').innerHTML)), !!a.doc.querySelector('.band-picker-resistenza')], [true, true, false]);
+  atteso('4 · piegamenti assistiti: il selettore dell\'assistenza, con «Corpo libero»', [/ASSISTENZA/.test(testo(a.doc.getElementById('page-training').innerHTML)), /Corpo libero/.test(testo(a.doc.getElementById('page-training').innerHTML)), !!a.doc.getElementById('tl-resist')], [true, true, false]);
+  scegli('tl-reps', '9'); scegli('tl-rir', '2');
+  const primaN = a.t.training_logs.length;
+  await W.saveTrainingSet();
+  atteso('4 · piegamenti assistiti: senza un colore la serie non si salva', a.t.training_logs.length - primaN, 0);
+  ST.trainLogBandColor = 'Rossa';
+  await W.saveTrainingSet();
+  const rigaP = a.t.training_logs[a.t.training_logs.length - 1];
+  atteso('4 · piegamenti assistiti: la serie si salva a colore', [rigaP.exercise_code, rigaP.band_color, rigaP.resistance], ['EX378', 'Rossa', null]);
+  if(ST.trainCountdown) W.skipCountdown();
   ST.trainLogOpen = null;
+  const mP = W.progMisura(PIEG, [{ reps: 9, band_color: 'Rossa' }, { reps: 9, band_color: 'Gialla' }]);
+  atteso('4 · la misura dei piegamenti assistiti: banda, verso assistenza, la più forte è la gialla', [mP.tipo, mP.verso, W.bestSetOfDay([{ reps: 9, band_color: 'Rossa' }, { reps: 9, band_color: 'Gialla' }], mP).band_color], ['banda', 'assistenza', 'Gialla']);
 
   // ── 5 · il testo che usciva dallo schermo ──
   const css = fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'stile.css'), 'utf8');
   const regola = (css.match(/html\.v5 \.te5-numeri b\{[^}]*\}/) || [''])[0];
   atteso('5 · i numeri della serie in corso vanno a capo (niente nowrap)', [/nowrap/.test(regola), /overflow-wrap:break-word/.test(regola)], [false, true]);
-  ST.trainProssima = { ['upperA_' + DIP]: pr(DIP, 12, 2, 'Gialla') };
+  ST.trainProssima = { ['upperA_' + PIEG]: pr(PIEG, 12, 2, 'Rossa') };
   ST.aiSuggestions = ST.aiSuggestions || {};
-  W.openTrainExec('upperA', DIP, 2);
+  W.openTrainExec('upperA', PIEG, 2);
   W.renderTraining();
   const frase = a.doc.querySelector('.te5-numeri.te5-frase');
   atteso('5 · la frase della PROSSIMA nella serie in corso ha la sua classe (più piccola, a capo)', !!frase || !!a.doc.querySelector('.te5-numeri'), true);
