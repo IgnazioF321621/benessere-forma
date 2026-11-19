@@ -2839,6 +2839,12 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     if(repsDone < repsMin){
       if(R && !cur) return fine({ bandColor: null, reps: repsMin }, bandTxt, `punta a ${repsMin} ${u}`);
       const giu = easier || scala[0];
+      // in fondo alla scala non c'è una banda più facile: chiedere il minimo che non si raggiunge non serve (Training
+      // 394). Si ripetono le ripetizioni fatte, una in più se il margine c'è.
+      if(giu === cur && repsDone > 0){
+        const n = (rirVal != null && rirVal > targetRIR) ? repsDone + step : repsDone;
+        return fine({ bandColor: cur, reps: n }, frase(cur), `${n} ${u}`);
+      }
       return fine({ bandColor: giu, reps: repsMin }, (giu === cur) ? frase(giu) : `${frase(giu)} (${R ? 'più leggero' : 'più aiuto'})`, `punta a ${repsMin} ${u}`);
     }
     // 4) RIR > target (facile) → stesso gradino, alza reps verso il tetto
@@ -2970,6 +2976,17 @@ function obiettivoPrimaSerie(exName, sessionId){
   } else if(sr){
     o.nota = 'rientro'; o.reps = parsed.min;
     if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = caricoNoto ? (lastV > 0 ? softReturnLoad(lastV) : 0) : null;
+  }
+  // Training 394 (19 novembre 2026, feedback di Ignazio 5226495e: nella settimana leggera le trazioni proponevano
+  // «banda Viola · 8 reps» dopo 6 sulla Viola, due in PIÙ). La causa: scarico e rientro riportano le ripetizioni al
+  // minimo dell'intervallo (8) e scendono di un gradino di banda; sulla banda che aiuta di più il gradino non c'è, e
+  // restava solo il minimo, più alto delle 6 fatte. Quando la banda non può scendere si tolgono ripetizioni: due terzi
+  // dell'ultima volta, almeno 1 (6 → 4), mai più di quelle fatte. Ridurre il volume a carico uguale è lo scarico
+  // classico (Bell et al. 2023, Sports Med Open 9:28, consenso sullo scarico).
+  if(o.nota && isPullUp && lastBand && bandaFacile() === lastBand){
+    const fatte = Number(last.reps) || 0;
+    if(fatte > 0) o.reps = Math.max(1, Math.min(fatte, Math.round(fatte * 2 / 3)));
+    o.bandColor = lastBand;
   }
   if(o.nota){
     const carico = isPullUp ? (o.bandColor ? bandPhraseV(o.bandColor, versoBanda) : (versoBanda === 'resistenza' ? 'elastico più leggero' : 'banda più facile'))
