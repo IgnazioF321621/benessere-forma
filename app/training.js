@@ -142,6 +142,32 @@ function minutiSeduta(sess, key){
   const sec = ZTRotazione.durataSeduta(sess, { unilaterale: ex => _exInfoCatalogo(ex).unilaterale, tabata: tabataInCoda(key) });
   return ZTRotazione.minutiSeduta(sec);
 }
+// ── Gli esercizi in coppia (Training 400, 20 novembre 2026) ──
+// Due esercizi con lo stesso `coppia` nella scheda si fanno a serie alternate, con una pausa breve fra l'uno e
+// l'altro: il recupero di uno è il lavoro dell'altro. La regola (chi è il compagno, quanto dura la pausa) sta in
+// shared/rotazione.js, la stessa che conta i minuti della seduta.
+function compagnoDi(sessionId, exName){ return ZTRotazione.compagno(getTrainingSession(sessionId), findExercise(exName, sessionId)); }
+function pausaCoppiaDi(sessionId, ex, altro){
+  return ZTRotazione.pausaCoppia(ex, altro, getTrainingSession(sessionId), e => _exInfoCatalogo(e).unilaterale);
+}
+function _serieFatteOggi(sessionId, exName){
+  return Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(`${sessionId}_${exName}_`) && k.endsWith(`_${todayKey()}`)).length;
+}
+// Finita la serie n di un esercizio in coppia: tocca al compagno? Sì se gli restano serie e non è già avanti
+// (il primo dei due apre il giro, il secondo lo chiude). Ritorna il compagno, o null.
+function toccaAlCompagno(sessionId, exName, n){
+  const sess = getTrainingSession(sessionId), ex = findExercise(exName, sessionId), altro = compagnoDi(sessionId, exName);
+  if(!sess || !ex || !altro) return null;
+  const fatte = _serieFatteOggi(sessionId, altro.name);
+  if(fatte >= (Number(altro.sets) || 0)) return null;
+  const apro = sess.exercises.indexOf(ex) < sess.exercises.indexOf(altro);
+  return fatte < (apro ? n : n + 1) ? altro : null;
+}
+function _rigaCoppiaHTML(sessionId, ex){
+  const altro = ex && ex.coppia ? compagnoDi(sessionId, ex.name) : null;
+  if(!altro) return '';
+  return `<div class="ex-coppia-riga" style="font-size:12px;color:var(--t2);font-family:var(--font-sans);font-weight:600;line-height:1.3;margin-top:2px;">⇄ In coppia con ${esc(altro.name)}: una serie a testa, ${pausaCoppiaDi(sessionId, ex, altro)} s di pausa</div>`;
+}
 // Il bersaglio a parole: «12-15 per lato», «20-40 sec per lato»; com'è scritto se l'esercizio non conta per lato.
 function _bersaglioReps(ex){
   const r = String((ex && ex.reps) || '').trim();
@@ -1486,6 +1512,7 @@ function startTrainingCountdown(seconds, exName, sessionId, opts){
     // (GIF e consigli servono a prepararlo), daEx quello appena finito (per «APPENA FATTA»).
     traEsercizi: !!(opts && opts.traEsercizi),
     daEx: (opts && opts.daEx) || null,
+    coppia: !!(opts && opts.coppia),   // Training 400: la pausa breve verso il compagno di coppia
   };
   // Se recupero ≤5 sec, non emettere prep beep (sarebbero immediati e confusi dopo il GO beep)
   if(seconds <= 5){
@@ -1644,7 +1671,7 @@ function _renderRestStriscia(){
   return `<div id="rest-striscia" style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;background:var(--acc);color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);">
       <button onclick="apriCountdown()" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:none;color:inherit;text-align:left;cursor:pointer;padding:0;">
         <span class="rest-striscia-num" style="font-family:var(--font-mono);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;">${fmt(cd.seconds)}</span>
-        <span style="min-width:0;"><span style="display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;opacity:.85;">${cd.traEsercizi ? 'PROSSIMO ESERCIZIO · RECUPERO' : 'RECUPERO'}</span><span style="display:block;font-family:var(--font-sans);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cd.exName)} · tocca per aprire</span></span>
+        <span style="min-width:0;"><span style="display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;opacity:.85;">${cd.coppia ? 'IN COPPIA · PAUSA' : cd.traEsercizi ? 'PROSSIMO ESERCIZIO · RECUPERO' : 'RECUPERO'}</span><span style="display:block;font-family:var(--font-sans);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cd.exName)} · tocca per aprire</span></span>
       </button>
       <button onclick="skipCountdown()" style="flex-shrink:0;background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Salta</button>
     </div>`;
@@ -2012,7 +2039,7 @@ function _coCostruisci(riga0, orig){
     _originaleOggi: originale,
   };
   if(testi.alert) nuovo.alert = _notaPerSeduta(testi.alert, { reps: orig.reps });   // Training 390
-  ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });
+  ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine', 'coppia'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });   // coppia: Training 400
   if(riga.unilaterale)  nuovo.unilaterale  = String(riga.unilaterale).trim().toLowerCase();
   if(riga.progressione) nuovo.progressione = String(riga.progressione).trim().toLowerCase();
   if(isSurrogato) nuovo.isSurrogato = true;
@@ -3354,6 +3381,9 @@ async function saveTrainingSet(){
       if(cand && !isDone(cand)){ nextEx = cand; break; }
     }
 
+    // Training 400: la pausa di coppia è già partita a «Fine serie» e porta al compagno: resta quella
+    const cdCoppia = (ST.trainCountdown && ST.trainCountdown.coppia && !ST.trainCountdown.done) ? findExercise(ST.trainCountdown.exName, form.sessionId) : null;
+    if(cdCoppia) nextEx = cdCoppia;
     // Scorri la card del prossimo esercizio in cima (dopo il repaint).
     if(nextEx){
       const cardId = 'excard-' + nextEx.name.replace(/[^a-zA-Z0-9]/g, '_');
@@ -3364,7 +3394,7 @@ async function saveTrainingSet(){
       // Recupero anche FRA un esercizio e l'altro (Training 290): prima il conto partiva solo fra
       // due serie dello stesso esercizio. Durata = il recupero dell'esercizio appena finito;
       // la finestra mostra GIF e consigli del PROSSIMO, così lo si prepara.
-      startTrainingCountdown(getRestSec(form.sessionId, exData), nextEx.name, form.sessionId, { traEsercizi:true, daEx: form.exName });
+      if(!cdCoppia) startTrainingCountdown(getRestSec(form.sessionId, exData), nextEx.name, form.sessionId, { traEsercizi:true, daEx: form.exName });
     }
     return;
   }
@@ -4455,6 +4485,7 @@ function renderTraining(){
                 <span class="ex-params-top">${e.sets} × ${esc(_bersaglioReps(e))}</span>
               </div>
               ${_rigaSurrogatoHTML(rigaSurrogatoDi(e), 12)}
+              ${_rigaCoppiaHTML(sel, e)}
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
@@ -5328,7 +5359,7 @@ function renderTraining(){
                 <button class="rest-hero-riduci" onclick="riduciCountdown()" aria-label="Riduci il foglio" title="Riduci: il tempo continua">⌄ riduci</button>
               </div>
               ${gifHTML}
-              <span class="rest-hero-cd-label">${cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
+              <span class="rest-hero-cd-label">${cd.coppia ? 'In coppia · pausa ' : cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
             </div>
           </div>
           <div class="rest-modal-body">
@@ -5378,7 +5409,7 @@ function renderTraining(){
                 if(cd.traEsercizi){
                   return `<div class="rest-row-cards rest-row-cards--una">
                   <div class="rest-card rest-card--next">
-                    <span class="rest-card-eyebrow">PRIMA SERIE · ${nomeCortoConTag(cd.exName)}</span>
+                    <span class="rest-card-eyebrow">${cd.coppia ? `ORA TOCCA A · SERIE ${savedN2 + 1}` : 'PRIMA SERIE'} · ${nomeCortoConTag(cd.exName)}</span>
                     ${nextHTML}
                   </div>
                 </div>`;
@@ -6228,7 +6259,13 @@ function trainExecFinishSet(){
     .length;
   const _nextSet = _doneCount + 1; // la serie che stiamo per loggare
   const _hasNextAfter = !!(_exDef && _exDef.sets && (_nextSet + 1) <= _exDef.sets);
-  if(_hasNextAfter){
+  // Training 400: in coppia, dopo la serie tocca al compagno, con la pausa breve della coppia
+  const _altro = toccaAlCompagno(e.sessionId, e.exName, _nextSet);
+  if(_altro){
+    try{ _unlockAudio(); }catch(e2){}
+    try{ playLongBeep(); }catch(e2){}
+    startTrainingCountdown(pausaCoppiaDi(e.sessionId, _exDef, _altro), _altro.name, e.sessionId, { traEsercizi:true, daEx: e.exName, coppia:true });
+  } else if(_hasNextAfter){
     try{ _unlockAudio(); }catch(e2){}
     try{ playLongBeep(); }catch(e2){}
     const _restEx = findExercise(e.exName, e.sessionId);

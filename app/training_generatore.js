@@ -919,6 +919,10 @@ function cambiaEsercizioBloccoNuovo(sid, codice, nuovoCodice) {
   const nuovo = mapped.exercises[0];
   if (!nuovo) return null;
   nuovo.sceltoDaTe = true;
+  // Training 400: il sostituto resta in coppia, con le serie e il recupero che il tetto di un'ora aveva lasciato
+  if (vecchio && vecchio.coppia) nuovo.coppia = vecchio.coppia;
+  if (vecchio && vecchio.serieTolte) { nuovo.sets = Math.max(1, nuovo.sets - vecchio.serieTolte); nuovo.serieTolte = vecchio.serieTolte; }
+  if (vecchio && !vecchio.iso && vecchio.rest_sec && nuovo.rest_sec > vecchio.rest_sec) nuovo.rest_sec = vecchio.rest_sec;
   sess.exercises[idx] = nuovo;
   bn.diff = _diffBloccoNuovo(bn.scheda, ST.schedaAttiva && ST.schedaAttiva.scheda);
   bn.cambio = null;
@@ -1560,6 +1564,114 @@ function _trainGenRiempiVolume(sessioni, obiettivo, pools, usati, rigenIdx, prim
     diario.push(`${g}: +${ex.codice} in ${s.splitType}#${s.occurrenceIdx}`);
   });
   return diario;
+}
+
+// ── Ogni seduta in un'ora, preparazione compresa (Training 400, 20 novembre 2026) ──
+// Ignazio: «fai in modo che abbiano una durata complessiva, tenendo conto delle pause e della sistemazione
+// dell'attrezzatura e materiale, di massimo 1 ora». La durata è quella di ZTRotazione.durataSeduta, fonte sola
+// (attivazione, riscaldamento, serie, recuperi, cambi), tarata sui tempi veri delle sue sedute. Finché una seduta
+// supera il tetto si fa UNA mossa alla volta, dalla meno costosa per l'allenamento alla più costosa:
+//   1. core e isolamenti in coppia, a serie alternate (ZTRotazione.pausaCoppia): stesso lavoro, il recupero di uno
+//      è il lavoro dell'altro. Mai due esercizi dello stesso muscolo. Robbins 2010, Weakley 2017, Paz 2017;
+//   2. spinta e tirata in coppia nei multiarticolari dell'Upper: muscoli opposti, a ognuno resta il suo recupero
+//      intero fra due serie sue (Robbins et al. 2010: spinta e tirata alternate, stesso volume in metà tempo).
+//      Nelle Lower no: due multiarticolari di gambe pesano sugli stessi muscoli e sul fiato;
+//   3. via la quarta serie agli isolamenti (la «serie in più» del volume);
+//   4. il recupero dei multiarticolari a 4-6 ripetizioni da 3 a 2,5 minuti (Schoenfeld et al. 2016, J Strength
+//      Cond Res 30:1805: recuperi lunghi meglio dei corti; de Salles et al. 2009: almeno 2 minuti sui carichi alti);
+//   5. solo dopo, via l'isolamento che serve meno al volume della settimana: prima uno che lascia tutti i muscoli
+//      sopra il minimo (volumeContoMinimi); se non c'è, quello che ne lascia sotto meno serie.
+// Prima le due mosse che non tolgono lavoro (le coppie), poi quelle che ne tolgono: così le serie per muscolo
+// restano sopra il minimo finché si può. I cardini e i due core non si tolgono mai. `coppieMulti:false` spegne
+// la mossa 2 (se a Ignazio alternare i multiarticolari non va): allora si passa prima da 3, 4 e 5.
+const TETTO_SEDUTA_SEC = 3600;
+const _TETTO_RECUPERO_FORZA = 150;
+function _tettoRiga(ex) { return (typeof _exInfoCatalogo === 'function' ? _exInfoCatalogo(ex) : null) || {}; }
+function _tettoDurata(sess, tabata) {
+  return ZTRotazione.durataSeduta(sess, { unilaterale: ex => ex.unilaterale || _tettoRiga(ex).unilaterale, tabata: !!tabata });
+}
+function _tettoGruppi(ex) {
+  return String(ex.gruppo_target || _tettoRiga(ex).gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+}
+function _tettoPattern(ex) { return _normPattern(ex.pattern || _tettoRiga(ex).pattern); }
+// Mette `b` subito dopo `a` e li segna con lo stesso numero di coppia
+function _tettoAccoppia(sess, a, b) {
+  const usati = sess.exercises.map(e => Number(e && e.coppia) || 0);
+  let n = 1; while (usati.includes(n)) n++;
+  a.coppia = n; b.coppia = n;
+  const lista = sess.exercises.filter(e => e !== b);
+  lista.splice(lista.indexOf(a) + 1, 0, b);
+  sess.exercises = lista;
+}
+// La prossima mossa per una seduta sopra il tetto, o null se non ce ne sono più. `tutte` = le sedute della scheda
+// (per il volume della settimana).
+function _tettoProssimaMossa(sess, tutte, o) {
+  const exs = sess.exercises.filter(Boolean);
+  const liberi = exs.filter(e => !e.coppia && Number(e.sets) > 0);
+  // 1 · core e isolamenti in coppia: dal fondo, col primo compagno che non lavora lo stesso muscolo
+  //     (prima uno dello stesso genere: isolamento con isolamento, core con core)
+  const accessori = liberi.filter(e => e.iso && !e.cardine);
+  for (let i = accessori.length - 1; i >= 0; i--) {
+    const b = accessori[i], gb = _tettoGruppi(b);
+    const prima = accessori.slice(0, i).filter(a => !_tettoGruppi(a).some(g => gb.includes(g)));
+    const a = prima.filter(x => _tettoPattern(x) === _tettoPattern(b)).pop() || prima.pop();
+    if (a) return { mossa: 1, testo: `in coppia ${a.codice} + ${b.codice}`, fai: () => _tettoAccoppia(sess, a, b) };
+  }
+  // 2 · spinta e tirata in coppia (solo multiarticolari a ripetizioni)
+  if (o.coppieMulti !== false) {
+    const multi = liberi.filter(e => !e.iso && (ZTRotazione.leggiReps(e.reps) || {}).kind === 'reps');
+    const spinte = multi.filter(e => /^spinta/.test(_tettoPattern(e))), tirate = multi.filter(e => /^tirata/.test(_tettoPattern(e)));
+    const piano = (e) => _tettoPattern(e).replace(/^(spinta|tirata)/, '');
+    let due = null;
+    spinte.forEach(sp => { const ti = tirate.find(t => piano(t) === piano(sp)); if (ti) due = [sp, ti]; });
+    if (!due && spinte.length && tirate.length) due = [spinte[spinte.length - 1], tirate[tirate.length - 1]];
+    if (due) {
+      const [a, b] = exs.indexOf(due[0]) < exs.indexOf(due[1]) ? due : [due[1], due[0]];
+      return { mossa: 2, testo: `in coppia ${a.codice} + ${b.codice} (spinta e tirata)`, fai: () => _tettoAccoppia(sess, a, b) };
+    }
+  }
+  // 3 · la quarta serie degli isolamenti
+  const quarta = exs.filter(e => e.iso && _tettoPattern(e) === 'isolamento' && Number(e.sets) > 3).pop();
+  if (quarta) return { mossa: 3, testo: `${quarta.codice} da ${quarta.sets} a 3 serie`, fai: () => { quarta.serieTolte = (quarta.serieTolte || 0) + (quarta.sets - 3); quarta.sets = 3; } };
+  // 4 · il recupero dei multiarticolari pesanti
+  const lungo = exs.filter(e => !e.iso && Number(e.rest_sec) > _TETTO_RECUPERO_FORZA && ((ZTRotazione.leggiReps(e.reps) || {}).max || 99) <= 6);
+  if (lungo.length) return { mossa: 4, testo: `recupero dei multiarticolari da ${lungo[0].rest_sec} a ${_TETTO_RECUPERO_FORZA} s (${lungo.map(e => e.codice).join(', ')})`, fai: () => lungo.forEach(e => { e.rest_sec = _TETTO_RECUPERO_FORZA; }) };
+  // 5 · via un isolamento: quello che costa meno al volume della settimana
+  const isolamenti = exs.filter(e => e.iso && !e.cardine && _tettoPattern(e) === 'isolamento');
+  if (!isolamenti.length) return null;
+  const senza = (ex) => tutte.map(t => t === sess ? { ...t, exercises: t.exercises.filter(e => e !== ex) } : t);
+  const pagella = isolamenti.map((ex, i) => {
+    const conto = volumeContoMinimi(senza(ex), o.obiettivo, _tettoRiga);
+    const manca = conto.reduce((n, c) => n + Math.max(0, c.minimo - c.serie), 0);
+    const avanzo = Math.min(...conto.filter(c => _tettoGruppi(ex).includes(c.gruppo)).map(c => c.serie - c.minimo).concat([99]));
+    return { ex, i, manca, avanzo };
+  }).sort((x, y) => (x.manca - y.manca) || (y.avanzo - x.avanzo) || (y.i - x.i));
+  const via = pagella[0];
+  return { mossa: 5, testo: `via ${via.ex.codice} ${via.ex.name}` + (via.manca > 0 ? ' (il volume scende sotto il minimo)' : ''), fai: () => {
+    const altro = ZTRotazione.compagno(sess, via.ex);
+    if (altro) delete altro.coppia;
+    sess.exercises = sess.exercises.filter(e => e !== via.ex);
+  } };
+}
+// Porta ogni seduta di lavoro sotto il tetto. Cambia le sedute passate (jsonb della scheda) e ritorna il diario:
+//   [{ sid, prima, dopo, mosse: [testo], sopra: bool }]   (prima e dopo in secondi)
+//   o: { obiettivo, tabata: bool | (sess) → bool, tetto, coppieMulti }
+function schedaEntroUnOra(sessioni, o) {
+  o = o || {};
+  const tetto = Number(o.tetto) || TETTO_SEDUTA_SEC;
+  const lavoro = (sessioni || []).filter(s => s && Array.isArray(s.exercises) && s.type !== 'Recupero' && s.type !== 'Riposo' && !/^(recovery|rest)/i.test(s.id || ''));
+  return lavoro.map(sess => {
+    const tab = typeof o.tabata === 'function' ? o.tabata(sess) : o.tabata;
+    const prima = _tettoDurata(sess, tab), mosse = [];
+    let giri = 0;
+    while (_tettoDurata(sess, tab) > tetto && giri++ < 60) {
+      const m = _tettoProssimaMossa(sess, lavoro, o);
+      if (!m) break;
+      m.fai(); mosse.push(m.testo);
+    }
+    const dopo = _tettoDurata(sess, tab);
+    return { sid: sess.id, prima, dopo, mosse, sopra: dopo > tetto };
+  });
 }
 
 // Criticità isolamenti per il TAGLIO PER TEMPO (Regola A): peso più BASSO =
@@ -2736,6 +2848,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // il rischio è basso, ma il vincolo del brief è esplicito: validazione
     // obbligatoria + no crash. Esercizi fantasma → skip + warning.
     const sessioniValidate = _trainGenValidateCodes(sessioniFinali, catalogMap);
+    // Training 400: ogni seduta sta in un'ora, preparazione compresa (il Tabata conta se è sempre in coda)
+    const tettoDiario = schedaEntroUnOra(sessioniValidate, { obiettivo, tabata: !!(profile && profile.tabata === 'coda') });
 
     // BLOCCO 12 — NOTA MOTIVAZIONALE AI (voce coach)
     // Una singola chiamata callAI con fallback fisso se fallisce o vuoto.
@@ -2776,6 +2890,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // Diagnostica: attrezzi dichiarati senza riscontro a catalogo. Come
       // sessioni[]._diag, STRIPPATO da _trainGenSaveToDB → non sporca il jsonb.
       _diagGear: pools.attrezziInerti || [],
+      _diagTetto: tettoDiario,
       // Solo in dryRun (anteprima del blocco nuovo): il pool dell'utente e gli attrezzi normalizzati,
       // per il «Cambia ›» che propone le alternative di uno slot. Strippato dal save come _diagGear.
       _pools: dryRun ? { poolPrincipali: pools.poolPrincipali, attrezzatura: Array.from(attrezzaturaSet), limitazioni } : undefined,
@@ -4038,7 +4153,7 @@ async function _trainGenSaveToDB(userId, scheda) {
     // Strip _diag (diagnostica Regola A) dalle sessioni + _diagGear (attrezzi
     // inerti) dalla radice prima del save: restano nel valore di ritorno
     // (ztSchedaWhy) ma NON sporcano il jsonb in DB.
-    const { _diagGear, _pools, ...schedaNoGear } = (scheda || {});
+    const { _diagGear, _diagTetto, _pools, ...schedaNoGear } = (scheda || {});
     const schedaClean = (scheda && Array.isArray(scheda.sessioni))
       ? { ...schedaNoGear, sessioni: scheda.sessioni.map(({ _diag, _sp, ...rest }) => rest) }
       : schedaNoGear;

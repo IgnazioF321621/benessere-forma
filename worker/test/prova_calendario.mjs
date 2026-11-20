@@ -148,7 +148,7 @@ const UPPER_B = { id: 'upperB', name: 'Upper B', type: 'Ipertrofia', rir: 1, res
   ],
   finisher: { type: 'tabata', round: 8, work_sec: 20, rest_sec: 10, exercises: [{ name: 'Camminata bear crawl' }, { name: 'Burpee' }] },
 };
-// le altre tre sedute: due multiarticolari e lo stesso Tabata (300 + 2 × 330 = 960 s → circa 15 minuti)
+// le altre tre sedute: due multiarticolari e lo stesso Tabata (con i tempi del Training 400: circa 20 minuti)
 const CORTA = (s) => ({ ...s, exercises: [ES('EX076', 'Rematore manubri panca piana', 3, '8-12', 90), ES('EX502', 'Trazioni sbarra presa inversa', 3, '8-12', 90)], finisher: UPPER_B.finisher });
 const SCHEDA_PIENA = { sessioni: SCHEDA.sessioni.map((s) => (s.id === 'upperB' ? UPPER_B : CORTA(s))) };
 const CATALOGO = [{ codice: 'EX704', unilaterale: 'si' }, { codice: 'EX034', unilaterale: 'si' }, { codice: 'EX041', unilaterale: 'alternato' }, { codice: 'EX076', unilaterale: 'no' }];
@@ -162,15 +162,17 @@ r = await chiama('/calendario?t=' + T1);
 let ev = evento(r.testo, 0);
 // 300 attivazione + 200 riscaldamento (3 × 60 + 2 × 10) + 4 × 330 (3 × 30 + 2 × 90 + 60) + 390 (per lato: 3 × 60 + 2 × 75 + 60)
 // + 420 (tenuta per lato: 3 × 80 + 2 × 60 + 60) + 390 (alternato a ripetizioni: per lato) = 3020 s → circa 50 minuti
-atteso('541 · giovedì 29 Upper B dura 50 minuti (la stima della seduta), non 60', [ev.find((x) => x.startsWith('DTSTART')), ev.find((x) => x.startsWith('DTEND')), ev.find((x) => x.startsWith('SUMMARY'))], ['DTSTART:20261029T063000Z', 'DTEND:20261029T072000Z', 'SUMMARY:[Workout] Upper B']);
+// Dal Training 400 (20 novembre 2026) i tempi sono quelli veri (3 s a ripetizione più 15 per registrare, il recupero
+// dopo ogni serie, 20 s di cambio): la stessa seduta fa circa 60 minuti, la Lower B 20, col Tabata 65.
+atteso('541 · giovedì 29 Upper B dura 60 minuti (la stima della seduta, coi tempi veri del Training 400)', [ev.find((x) => x.startsWith('DTSTART')), ev.find((x) => x.startsWith('DTEND')), ev.find((x) => x.startsWith('SUMMARY'))], ['DTSTART:20261029T063000Z', 'DTEND:20261029T073000Z', 'SUMMARY:[Workout] Upper B']);
 atteso('541 · la descrizione: durata, preparazione, gli esercizi con serie × ripetizioni, per lato dal catalogo', descr(ev).split('\n'), [
-  'Circa 50 minuti', 'Preparazione 5 min e riscaldamento (3 esercizi)',
+  'Circa 60 minuti', 'Preparazione 5 min e riscaldamento (3 esercizi)',
   '1. Rematore manubri panca piana — 3 × 8-12', '2. Trazioni sbarra presa inversa — 3 × 8-12', '3. Dip panca piedi rialzati — 3 × 8-12',
   '4. Piegamenti presa stretta ginocchia a terra — 3 × 8-12', '5. Alzate diagonali un braccio elastico gomito 90 gradi — 3 × 12-15 per lato',
   '6. Plank laterale avambraccio — 3 × 20-40 sec per lato', '7. Crunch bicicletta — 3 × 12-15 per lato']);
 atteso('541 · l\'indirizzo che apre l\'app su Training, l\'avviso 15 minuti prima come prima', [ev.includes('URL:https://ignaziof321621.github.io/benessere-forma/zona-tracker.html?apri=training'), ev.includes('TRIGGER:-PT15M'), ev.some((x) => x === 'DESCRIPTION:[Workout] Upper B fra 15 minuti')], [true, true, true]);
 atteso('541 · il catalogo si legge una volta, per i codici delle sedute nel calendario', [letture.filter((l) => l.table === 'esercizi_catalog').length, decodeURIComponent((letture.find((l) => l.table === 'esercizi_catalog') || {}).query || '').includes('codice=in.(EX076,EX502,EX311,EX690,EX704,EX034,EX041)')], [1, true]);
-atteso('541 · ogni seduta con la sua durata (Lower B venerdì: circa 15 minuti); nessun recupero; nessuna scrittura', [evento(r.testo, 1).find((x) => x.startsWith('SUMMARY')), evento(r.testo, 1).find((x) => x.startsWith('DTEND')), eventi(r.testo).length, scritture], ['SUMMARY:[Workout] Lower B', 'DTEND:20261030T064500Z', 16, []]);
+atteso('541 · ogni seduta con la sua durata (Lower B venerdì: circa 20 minuti); nessun recupero; nessuna scrittura', [evento(r.testo, 1).find((x) => x.startsWith('SUMMARY')), evento(r.testo, 1).find((x) => x.startsWith('DTEND')), eventi(r.testo).length, scritture], ['SUMMARY:[Workout] Lower B', 'DTEND:20261030T065000Z', 16, []]);
 atteso('541 · ogni riga piegata a 75 ottetti al massimo', r.testo.split('\r\n').every((x) => Buffer.byteLength(x, 'utf8') <= 75), true);
 
 // la settimana di scarico: 11 sedute di lavoro fatte, 4 a giro → la 10ª prevista (venerdì 13) apre la sesta settimana
@@ -193,8 +195,8 @@ atteso('541 · se gli scarichi non si leggono, 502 come le altre letture', (awai
 conScheda({ p1: { tabata: 'giorni', tabata_giorni: [4] } });
 r = await chiama('/calendario?t=' + T1);
 tutte = sedi(r.testo);
-atteso('541 · Tabata il giovedì: la Upper B di giovedì 29 dura 55 minuti e lo dice in fondo', [tutte[0].find((x) => x.startsWith('DTEND')), descr(tutte[0]).split('\n').pop()], ['DTEND:20261029T072500Z', 'Tabata in coda: 8 round, 4 min']);
-atteso('541 · Tabata il giovedì: la Lower B di venerdì resta senza, e resta di 15 minuti', [/Tabata/.test(descr(tutte[1])), tutte[1].find((x) => x.startsWith('DTEND'))], [false, 'DTEND:20261030T064500Z']);
+atteso('541 · Tabata il giovedì: la Upper B di giovedì 29 dura 65 minuti e lo dice in fondo', [tutte[0].find((x) => x.startsWith('DTEND')), descr(tutte[0]).split('\n').pop()], ['DTEND:20261029T073500Z', 'Tabata in coda: 8 round, 4 min']);
+atteso('541 · Tabata il giovedì: la Lower B di venerdì resta senza, e resta di 20 minuti', [/Tabata/.test(descr(tutte[1])), tutte[1].find((x) => x.startsWith('DTEND'))], [false, 'DTEND:20261030T065000Z']);
 conScheda({ p1: { tabata: 'a_parte' } });
 r = await chiama('/calendario?t=' + T1);
 atteso('541 · Tabata «a parte» o spento: in nessuna seduta', sedi(r.testo).some((e) => /Tabata/.test(descr(e))), false);

@@ -68,11 +68,12 @@ function fixture(){
   const vg = b.win.volumeContoMinimi(sessioni, 'ricomposizione');
   const tutti = [].concat(...sessioni.map(s => s.exercises || []));
   const conIso = ['deltoidi posteriori', 'bicipiti', 'tricipiti', 'glutei', 'ischiocrurali'];   // i gruppi con almeno due isolamenti a catalogo (polpacci e laterali ne hanno uno: restano sotto)
-  atteso('generatore · nessun gruppo con isolamenti a catalogo resta sotto il minimo', vg.filter(r => conIso.includes(r.gruppo) && r.sotto).map(r => `${r.gruppo} ${r.serie}/${r.minimo}`), []);
+  // dal Training 400 il tetto di un'ora può togliere la quarta serie a un isolamento: il gruppo resta al più una serie sotto
+  atteso('generatore · nessun gruppo con isolamenti a catalogo resta più di una serie sotto il minimo (Training 400: il tetto di un\'ora)', vg.filter(r => conIso.includes(r.gruppo) && r.serie < r.minimo - 1).map(r => `${r.gruppo} ${r.serie}/${r.minimo}`), []);
   atteso('generatore · polpacci: un solo isolamento a catalogo → +1 serie (4) e resta sotto, senza doppioni', [vg.find(r => r.gruppo === 'polpacci').serie, tutti.filter(e => e.codice === 'EX067').length], [4, 1]);
   atteso('generatore · gli esercizi portano schema e gruppo nel jsonb', tutti.every(e => e.pattern && (e.gruppo_target || /^(spinta|tirata|dominante)/.test(e.pattern))), true);
   const inPiu = tutti.filter(e => e.serieInPiu), aggiunti = tutti.filter(e => e.perVolume);
-  atteso('generatore · c\'è chi ha una serie in più (4 invece di 3) e chi è entrato per il volume', [inPiu.length > 0, inPiu.every(e => e.sets === 4), aggiunti.length > 0, aggiunti.every(e => e.pattern === 'isolamento')], [true, true, true, true]);
+  atteso('generatore · c\'è chi ha una serie in più (4 invece di 3, o 3 se l\'ora non bastava) e chi è entrato per il volume', [inPiu.length > 0, inPiu.every(e => e.sets === 4 || (e.sets === 3 && e.serieTolte === 1)), aggiunti.length > 0, aggiunti.every(e => e.pattern === 'isolamento')], [true, true, true, true]);
   atteso('generatore · la diagnostica dice chi è entrato per il volume', sessioni.some(s => s._diag && (s._diag.bonus || []).some(x => /:volume$/.test(x))), true);
   atteso('generatore · chi entra per il volume non è in nessun\'altra seduta', aggiunti.every(a => tutti.filter(e => e.codice === a.codice).length === 1), true);
   atteso('generatore · una serie in più al massimo per esercizio, un esercizio al massimo per gruppo', [inPiu.every(e => e.serieInPiu === 1), new Set(aggiunti.map(e => e.perVolume)).size === aggiunti.length], [true, true]);
