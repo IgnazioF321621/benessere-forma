@@ -53,15 +53,28 @@ var ZTRotazione = (function(){
   // I tempi della seduta, in secondi (Training 541). Erano nel generatore (_TRAIN_GEN_TIME_BUDGET) e nel flusso del
   // riscaldamento (WARMUP_*): adesso stanno qui, una volta, e il generatore, il riscaldamento e il calendario li leggono.
   //   attivazione  il blocco fisso d'apertura (ACTIVATION_BLOCK: 2 + 2 + 1 minuti)
-  //   serie        una serie a ripetizioni (8-12 ripetizioni a 2-3 secondi l'una)
-  //   cambio       passare da un esercizio al successivo
+  //   cambio       quello che il passaggio a un altro esercizio prende oltre al recupero
   //   finisher     il Tabata, se la scheda non ne scrive i round
   //   voce, riposoVoce, lato, pausaLato   il riscaldamento: 60 s a voce, 10 s fra le voci, 30 s per lato e 5 per cambiare
   // Il riscaldamento specifico dura al massimo 3 minuti (Training 390, 17 novembre 2026, segnalazione di Ignazio 3e11a3d8:
   // «6 esercizi · 6 min 20 s», ci si perde): 3 voci da 50 secondi e 10 per cambiare = 170 s (una voce per lato: 20 + 5 + 20).
   // Prima dei pesi basta un riscaldamento breve e specifico, senza fatica: Fradkin, Zazryn e Smoliga 2010 (J Strength Cond
   // Res 24:140), McGowan et al. 2015 (Sports Med 45:1523). Le serie di avvicinamento le fa la prima serie leggera.
-  var TEMPO = { attivazione: 300, serie: 30, cambio: 60, finisher: 300, voce: 50, riposoVoce: 10, lato: 20, pausaLato: 5 };
+  //
+  // I tempi delle serie sono tarati sui tempi veri (Training 400, 20 novembre 2026). Nelle quattro sedute del 17-20
+  // novembre 2026 di Ignazio (74 serie in training_logs, l'intervallo fra un salvataggio e il successivo):
+  //   · fra due serie dello stesso esercizio passano il recupero scritto più 35 s a 4-6 ripetizioni e 65 s a 12-15
+  //     (la serie dura più dei 30 s di prima e poi va registrata): 3 s a ripetizione più 15 s per registrare;
+  //   · fra l'ultima serie di un esercizio e la prima del successivo passa il recupero INTERO dell'esercizio finito
+  //     (l'app fa partire «Prossimo esercizio · recupero») più una quindicina di secondi: prima si contava un cambio
+  //     di 60 s al posto del recupero, e Upper A usciva 79 minuti invece di 100. La sistemazione dell'attrezzo
+  //     (agganciare l'elastico, spostare la panca) sta dentro quel recupero: `cambio` è quello che avanza.
+  // Con questi numeri la stima delle quattro sedute supera la durata vera del 2-6%.
+  //   ripetizione, registro   una ripetizione e il tempo di registrare la serie
+  //   serie                   una serie di cui non si leggono le ripetizioni
+  //   coppia, coppiaMulti     la pausa più corta fra i due esercizi di una coppia (accessori · multiarticolari)
+  var TEMPO = { attivazione: 300, serie: 30, ripetizione: 3, registro: 15, cambio: 20, coppia: 30, coppiaMulti: 45,
+    finisher: 300, voce: 50, riposoVoce: 10, lato: 20, pausaLato: 5 };
   var RISCALDAMENTO_VOCI = 3, RISCALDAMENTO_MAX = 180;
   var RECUPERO_PARTENZA = 90;                // il recupero fra le serie quando la scheda non lo scrive
 
@@ -239,22 +252,63 @@ var ZTRotazione = (function(){
     return RECUPERO_PARTENZA;
   }
 
-  // Quanto dura una seduta, in secondi: attivazione + riscaldamento + per ogni esercizio le serie (30 s, o i secondi
-  // più alti delle tenute; il doppio per lato), i recuperi fra le serie e un cambio + il Tabata se c'è quel giorno.
+  // Una serie, in secondi: le tenute i secondi più alti; a ripetizioni 3 s l'una più il tempo di registrare
+  // (4-6 → 33 s, 8-12 → 51 s, 12-15 → 60 s); per lato il doppio del lavoro.
+  function lavoroSerie(ex, unilaterale){
+    var pr = leggiReps(ex && ex.reps), lati = contaPerLato(ex, unilaterale, pr) ? 2 : 1;
+    if(pr && pr.kind === 'seconds') return pr.max * lati;
+    if(pr) return pr.max * TEMPO.ripetizione * lati + TEMPO.registro;
+    return TEMPO.serie * lati;
+  }
+
+  // ── Gli esercizi in coppia (Training 400) ──
+  // Due esercizi con lo stesso `coppia` nella scheda si fanno a serie alternate: una serie del primo, una pausa
+  // breve, una del secondo, una pausa breve. Ogni muscolo riposa mentre lavora l'altro: la pausa è quella che
+  // serve perché fra due serie dello STESSO esercizio passi almeno il suo recupero scritto, e mai meno di 30 s
+  // (45 s se nella coppia c'è un multiarticolare). Robbins et al. 2010 (J Strength Cond Res 24:2632, spinta e
+  // tirata alternate: stesso volume in metà tempo), Weakley et al. 2017 (Eur J Appl Physiol 117:1877), Paz et al.
+  // 2017 (J Strength Cond Res 31:2777).
+  function compagno(sess, ex){
+    if(!sess || !ex || !ex.coppia) return null;
+    var altri = (sess.exercises || []).filter(function(e){ return e && e !== ex && e.coppia === ex.coppia; });
+    return altri.length === 1 ? altri[0] : null;
+  }
+  function pausaCoppia(a, b, sess, unilaterale){
+    var uni = typeof unilaterale === 'function' ? unilaterale : function(){ return null; };
+    var serve = Math.max(recuperoSec(a, sess) - lavoroSerie(b, uni(b)), recuperoSec(b, sess) - lavoroSerie(a, uni(a)));
+    var minima = (a.iso && b.iso) ? TEMPO.coppia : TEMPO.coppiaMulti;
+    return Math.max(minima, Math.ceil(serve / 2 / 5) * 5);
+  }
+
+  // Quanto dura una seduta, in secondi: attivazione + riscaldamento + per ogni esercizio le serie (lavoroSerie) e
+  // il recupero dopo OGNI serie, anche l'ultima (è il recupero verso l'esercizio dopo), più il cambio + il Tabata
+  // se c'è quel giorno. Due esercizi in coppia: i giri alternati con la pausa breve, le serie che avanzano a uno
+  // dei due come da soli, un cambio solo. Dopo l'ultima serie della seduta non c'è recupero.
   //   durataSeduta(sess, { unilaterale: function(ex) → 'si'|'alternato'|..., tabata: bool })
-  // Il recupero dopo l'ultima serie di un esercizio non si conta: lì c'è il cambio. Il carry conclusivo della
-  // scheda non si conta: l'app non lo mostra nella seduta.
+  // Il carry conclusivo della scheda non si conta: l'app non lo mostra nella seduta.
   function durataSeduta(sess, o){
     o = o || {};
     if(!sess) return 0;
     var uni = typeof o.unilaterale === 'function' ? o.unilaterale : function(){ return null; };
     var t = TEMPO.attivazione + riscaldamentoSec(sess.warmup);
-    (sess.exercises || []).filter(Boolean).forEach(function(ex){
-      var n = Math.max(0, Number(ex.sets) || 0), pr = leggiReps(ex.reps);
-      var lavoro = (pr && pr.kind === 'seconds') ? pr.max : TEMPO.serie;
-      if(contaPerLato(ex, uni(ex), pr)) lavoro *= 2;
-      t += n * lavoro + Math.max(0, n - 1) * recuperoSec(ex, sess) + TEMPO.cambio;
+    var lista = (sess.exercises || []).filter(Boolean), fatti = [], ultimo = 0;
+    var serie = function(ex){ return Math.max(0, Number(ex.sets) || 0); };
+    lista.forEach(function(ex){
+      if(fatti.indexOf(ex) !== -1) return;
+      var n = serie(ex), lav = lavoroSerie(ex, uni(ex)), rec = recuperoSec(ex, sess), altro = compagno(sess, ex);
+      if(altro && fatti.indexOf(altro) === -1 && n && serie(altro)){
+        var m = serie(altro), lavB = lavoroSerie(altro, uni(altro)), recB = recuperoSec(altro, sess);
+        var giri = Math.min(n, m), pausa = pausaCoppia(ex, altro, sess, uni);
+        t += giri * (lav + lavB + 2 * pausa) + (n - giri) * (lav + rec) + (m - giri) * (lavB + recB) + TEMPO.cambio;
+        ultimo = n > giri ? rec : m > giri ? recB : pausa;
+        fatti.push(altro);
+      } else if(n){
+        t += n * (lav + rec) + TEMPO.cambio;
+        ultimo = rec;
+      }
+      fatti.push(ex);
     });
+    t -= ultimo;
     if(o.tabata && haFinisher(sess)) t += tabataSec(sess.finisher) + TEMPO.cambio;
     return t;
   }
@@ -378,7 +432,7 @@ var ZTRotazione = (function(){
     posizione: posizione, prossima: prossima, sedutePreviste: sedutePreviste, ics: ics,
     URL_TRAINING: URL_TRAINING, DESCRIZIONE_MAX: DESCRIZIONE_MAX, TEMPO: TEMPO,
     leggiReps: leggiReps, contaPerLato: contaPerLato, riscaldamentoSec: riscaldamentoSec, riscaldamentoBreve: riscaldamentoBreve, RISCALDAMENTO_MAX: RISCALDAMENTO_MAX, tabataInCoda: tabataInCoda,
-    durataSeduta: durataSeduta, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
+    durataSeduta: durataSeduta, lavoroSerie: lavoroSerie, compagno: compagno, pausaCoppia: pausaCoppia, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
     scaricoPerEventi: scaricoPerEventi,
   };
 })();

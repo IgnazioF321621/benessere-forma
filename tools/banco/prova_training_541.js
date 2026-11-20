@@ -67,8 +67,8 @@ function avvio(url){
     const W = a.W, R = W.ZTRotazione;
     const reps = ['4-6', '8-12 per lato', '20-40 sec', '30 sec per lato', '10 min', '', null, 'max'];
     atteso('1 · parseRepsRange nell\'app è la regola di shared', reps.every(r => JSON.stringify(W.parseRepsRange(r)) === JSON.stringify(R.leggiReps(r))), true);
-    atteso('1 · i tempi del generatore non cambiano: 30 · 300 · 300 · 60, e restano 2 e 6 esercizi', JSON.parse(W.eval('JSON.stringify(_TRAIN_GEN_TIME_BUDGET)')),
-      { set_execution_sec:30, warmup_sec:300, finisher_sec:300, buffer_sec:60, min_exercises_per_session:2, max_exercises_per_session:6 });
+    atteso('1 · i tempi del generatore: 30 · 300 · 300 · 20 (il cambio è 20 s dal Training 400), e restano 2 e 6 esercizi', JSON.parse(W.eval('JSON.stringify(_TRAIN_GEN_TIME_BUDGET)')),
+      { set_execution_sec:30, warmup_sec:300, finisher_sec:300, buffer_sec:20, min_exercises_per_session:2, max_exercises_per_session:6 });
     atteso('1 · il riscaldamento: 50 s a voce, 10 fra le voci, 20 per lato + 5 (dal Training 390: al massimo 3 minuti)', [W.eval('WARMUP_WORK_SEC'), W.eval('WARMUP_REST_SEC'), W.eval('WARMUP_ISO_SIDE_SEC'), W.eval('WARMUP_ISO_PAUSE_SEC'),
       W._warmupDurataTotale([{ reps:'15-20' }, { reps:'30 sec' }, { reps:'30 sec per lato' }])], [50, 10, 20, 5, 50 + 30 + 45 + 20]);
     a.ST.catalogInfoByCodice = new W.Map([['EXA', { unilaterale:'si' }], ['EXB', { unilaterale:'alternato' }]]);
