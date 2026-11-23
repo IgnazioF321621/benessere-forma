@@ -3218,3 +3218,15 @@ html.v5 #page-body :is(.an-pan-sotto,.an-pan-num small,.an-val-nome small,.an-va
 .blocco5-giro{margin-top:4px;font-family:var(--font-mono);font-size:11px;color:var(--t3);}
 .ex-riempitivo-riga{font-size:12px;color:var(--warn);font-family:var(--font-sans);font-weight:600;line-height:1.3;margin-top:2px;}
 .rest-hero-correggi{border:none;background:none;padding:0;margin:4px 0;color:var(--acc);font-family:var(--font-mono);font-size:11px;font-weight:700;text-decoration:underline;cursor:pointer;text-align:left;}
+
+/* Training 411: nella riga «Adesso» il carico, l'elastico, i due lati, l'attrezzo, il riferimento e la nota */
+.adesso5 button.adesso5-nome{border:none;background:none;padding:0;text-align:left;cursor:pointer;}
+.adesso5-info{font-size:13px;color:var(--t3);}
+.adesso5-attrezzo{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;color:var(--t3);}
+.adesso5-riferimento{font-family:var(--font-mono);font-size:12px;color:var(--t1);background:var(--s1);border-radius:8px;padding:6px 8px;line-height:1.35;}
+.adesso5-nota{font-family:var(--font-sans);font-size:12px;color:var(--t2);line-height:1.35;}
+.adesso5-bande{flex-direction:column;align-items:stretch;flex-basis:100%;}
+.adesso5-bande > div{display:flex;gap:4px;flex-wrap:wrap;}
+.adesso5-banda{flex:1;min-width:56px;min-height:36px;border:1px solid var(--s3);background:var(--bianco);color:var(--t1);border-radius:8px;font-family:var(--font-sans);font-size:13px;font-weight:700;cursor:pointer;}
+.adesso5-banda.on{background:var(--acc);border-color:var(--acc);color:var(--bianco);}
+.adesso5-registro-pieno{font-family:var(--font-mono);font-size:11px;color:var(--acc);text-align:center;}
