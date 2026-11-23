@@ -142,6 +142,21 @@ function minutiSeduta(sess, key){
   const sec = ZTRotazione.durataSeduta(sess, { unilaterale: ex => _exInfoCatalogo(ex).unilaterale, tabata: tabataInCoda(key) });
   return ZTRotazione.minutiSeduta(sec);
 }
+// ── La Upper Pump facoltativa (Training 420, 24 novembre 2026) ──
+// Nei giorni della settimana dopo le quattro di base, o nel quinto giorno scelto: si apre da qui quando si vuole, la
+// Home la propone quando è il suo turno (ZTRotazione.prossima). Saltarla non sposta niente.
+function _cardPumpHTML(prossimaSid){
+  const fac = ZTRotazione.FACOLTATIVA;
+  const s = ST.userTrainingSessions && ST.userTrainingSessions[fac];
+  if(!s) return '';
+  const ld = ST.sessionLastCompletion ? ST.sessionLastCompletion[fac] : null;
+  const fattaSett = ld && ld >= ZTRotazione.lunediDi(todayKey());
+  const etichetta = fattaSett ? `✓ ${fmtDate(ld)}` : prossimaSid === fac ? 'OGGI' : 'FACOLTATIVA';
+  return `<div class="pump5-card" id="pump5-card" onclick="openTrainingSession('${fac}')">
+      <div class="pump5-testa"><span class="pump5-nome">${esc(s.name || 'Upper Pump')}</span><span class="pump5-chip">${etichetta}</span></div>
+      <div class="pump5-sotto">Spalle e braccia · circa ${minutiSeduta(s)} min · quando c'è il quinto giorno</div>
+    </div>`;
+}
 // ── La seduta a blocchi (Training 410, 23 novembre 2026) ──
 // A veste nuova (html.v5) una seduta di lavoro si fa a blocchi: A1, A2… a giri, una serie di ognuno. La regola (quali
 // blocchi, in che ordine, quanto dura la pausa) sta in shared/rotazione.js (ZTRotazione.blocchi / adesso / pausaVerso).
@@ -4959,6 +4974,7 @@ function renderTraining(){
         </div>
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">UPPER / LOWER · 4 ALLENAMENTI</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">${dayCards}</div>
+        ${_cardPumpHTML(prossimaSid)}
         <div style="display:flex;flex-direction:column;gap:8px;">${recoveryRows}</div>
       </div>`;
     }

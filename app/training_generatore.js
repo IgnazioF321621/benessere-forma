@@ -922,7 +922,9 @@ function cambiaEsercizioBloccoNuovo(sid, codice, nuovoCodice) {
   // Training 400 e 410: il sostituto resta nel blocco, con le serie e il recupero che il tetto di un'ora aveva lasciato
   if (vecchio && vecchio.blocco) nuovo.blocco = vecchio.blocco;
   if (vecchio && vecchio.riempitivo) nuovo.riempitivo = true;
-  if (vecchio && vecchio.serieTolte) { nuovo.sets = Math.max(1, nuovo.sets - vecchio.serieTolte); nuovo.serieTolte = vecchio.serieTolte; }
+  // il sostituto tiene le serie del posto (Training 420: il volume le ha decise per la settimana)
+  if (vecchio && Number(vecchio.sets) > 0) nuovo.sets = Number(vecchio.sets);
+  if (vecchio && vecchio.serieTolte) nuovo.serieTolte = vecchio.serieTolte;
   if (vecchio && !vecchio.iso && vecchio.rest_sec && nuovo.rest_sec > vecchio.rest_sec) nuovo.rest_sec = vecchio.rest_sec;
   sess.exercises[idx] = nuovo;
   bn.diff = _diffBloccoNuovo(bn.scheda, ST.schedaAttiva && ST.schedaAttiva.scheda);
@@ -975,6 +977,8 @@ async function rinnovaRiscaldamento() {
 function serieForzaDaTogliere(scheda) {
   if (!scheda || !Array.isArray(scheda.sessioni)) return [];
   if (String(scheda.obiettivo || '').split(',')[0].trim() === 'forza_performance') return [];
+  // una scheda a blocchi (Training 410 e 420) ha già le serie decise dal tempo e dal volume: niente da accorciare
+  if (scheda.sessioni.some(s => s && Array.isArray(s.exercises) && s.exercises.some(e => e && e.blocco))) return [];
   const a = _DUP_COMPOUND_FORZA.sets;
   const out = [];
   scheda.sessioni.forEach(s => {
@@ -1439,14 +1443,32 @@ const _TRAIN_GEN_COMPOUND_COVERAGE = {
 // deltoidi anteriori). Le sedute di recupero non contano.
 const _VOL_GRUPPI = ['petto', 'dorsali', 'deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'quadricipiti', 'ischiocrurali', 'glutei', 'polpacci'];
 const _VOL_MINIMI_PER_OBIETTIVO = { ipertrofia: 10, ricomposizione: 10, forza_performance: 8, dimagrimento: 8, mantenimento: 6, longevita: 6 };
+// Training 420 (24 novembre 2026): il conto «frazionario» della letteratura (Pelland et al. 2024, Sports Med: la serie
+// vale 1 per il muscolo che la guida e ½ per quelli che aiutano). Il muscolo che guida è il gruppo bersaglio della
+// riga di catalogo quando è fra quelli dello schema: il dip (spinta verticale, bersaglio tricipiti) vale 1 ai tricipiti
+// e ½ al petto, non mezza serie alle spalle laterali come un lento in piedi; lo stacco rumeno (anca, bersaglio
+// ischiocrurali) vale 1 agli ischiocrurali e ½ ai glutei, il reverse hyper il contrario.
 const _VOL_COMPOUND_CREDITO = {
   'spinta orizzontale': { petto: 1, tricipiti: 0.5, 'deltoidi anteriori': 0.5 },
   'spinta verticale':   { 'deltoidi anteriori': 1, tricipiti: 0.5, 'deltoidi laterali': 0.5 },
   'tirata orizzontale': { dorsali: 1, bicipiti: 0.5, 'deltoidi posteriori': 0.5 },
   'tirata verticale':   { dorsali: 1, bicipiti: 0.5 },
   'dominante ginocchia': { quadricipiti: 1, glutei: 0.5 },
-  'dominante anca':     { glutei: 1, ischiocrurali: 1 },
+  'dominante anca':     { glutei: 1, ischiocrurali: 0.5 },
 };
+// Il dip: la spinta verticale col bersaglio sui tricipiti o sul petto
+const _VOL_DIP = { tricipiti: 1, petto: 0.5, 'deltoidi anteriori': 0.5 };
+function _volCrediti(pattern, gruppi) {
+  const base = _VOL_COMPOUND_CREDITO[pattern];
+  if (!base) return null;
+  if (pattern === 'spinta verticale' && (gruppi || []).some(g => g === 'tricipiti' || g === 'petto')) return _VOL_DIP;
+  const guida = (gruppi || [])[0];
+  if (!guida || base[guida] === undefined || base[guida] === 1) return base;
+  // il bersaglio della riga è fra i secondari dello schema: guida lui, gli altri valgono ½
+  const out = {};
+  Object.keys(base).forEach(g => { out[g] = g === guida ? 1 : 0.5; });
+  return out;
+}
 function volumeMinimi(obiettivo) {
   const o = (typeof migrateObiettivo === 'function') ? migrateObiettivo(String(obiettivo || '').split(',')[0].trim()) : String(obiettivo || '').trim();
   const m = _VOL_MINIMI_PER_OBIETTIVO[o] != null ? _VOL_MINIMI_PER_OBIETTIVO[o] : 8;
@@ -1467,7 +1489,7 @@ function volumeSettimanale(sessioni, riga) {
       const gruppi = gts(ex.gruppo_target || info.gruppo_target);
       const sets = Number(ex.sets) || 0;
       if (!sets) return;
-      const credito = _VOL_COMPOUND_CREDITO[pattern];
+      const credito = _volCrediti(pattern, gruppi);
       if (credito) Object.keys(credito).forEach(g => add(g, sets * credito[g]));
       else gruppi.forEach(g => add(g, sets));
     });
@@ -1569,30 +1591,38 @@ function _trainGenRiempiVolume(sessioni, obiettivo, pools, usati, rigenIdx, prim
 
 // ── Ogni seduta in un'ora, preparazione compresa (Training 400 e 410) ──
 // Ignazio (20 novembre 2026): «una durata complessiva, tenendo conto delle pause e della sistemazione dell'attrezzatura
-// e materiale, di massimo 1 ora». Dal Training 410 (23 novembre) la durata si conta a serie, coi tempi misurati
-// (ZTRotazione.durataSeduta: 150 s a serie con tutto il resto, più attivazione e riscaldamento): in un'ora stanno
-// circa 20 serie. Finché una seduta è sopra si fa una mossa alla volta, quella che costa meno al volume della
-// settimana per serie risparmiata (volumeContoMinimi: le serie che mancano ai minimi, tutti i muscoli insieme):
-//   · una serie in meno a un core (il core non conta nel volume dei muscoli);
-//   · una serie in meno a un isolamento, mai sotto 2;
-//   · via un isolamento (prima quelli che lavorano un muscolo già sopra il minimo, poi i doppioni);
-//   · una serie in meno a un multiarticolare che non è un cardine, mai sotto 2.
-// A parità di costo vale quest'ordine. I cardini e i due core restano; tre serie sui multiarticolari, due sugli altri,
-// è la forma che ne viene di solito. Il volume a settimana scende: con 20 serie a seduta non tutti i muscoli
-// arrivano a 10 serie (Schoenfeld et al. 2017, J Sports Sci 35:1073, dose e risposta; Iversen et al. 2021 per
-// l'allenamento con poco tempo: prima si salvano i multiarticolari). Il diario dice chi resta sotto.
-// Poi i blocchi (ZTRotazione.blocchi): ogni esercizio prende la sua lettera (`blocco`) e il segno `riempitivo`,
-// e gli esercizi si mettono nell'ordine dei blocchi. Le coppie del 400 (`coppia`) diventano blocchi.
-const TETTO_SEDUTA_SEC = 3600;
+// e materiale, di massimo 1 ora». Dal Training 410 la durata si conta a serie coi tempi misurati
+// (ZTRotazione.durataSeduta: 150 s a serie con tutto il resto, più attivazione e riscaldamento).
+// ── La base di quattro sedute che porta ogni muscolo a 10 serie (Training 420, 24 novembre 2026) ──
+// Ignazio ha scelto l'alternativa D (docs/proposte/VOLUME_ALTERNATIVE.md): circa 10 serie a settimana per muscolo
+// (Schoenfeld et al. 2017, J Sports Sci 35:1073), contate come la letteratura (_volCrediti, Pelland et al. 2024), in
+// quattro sedute: le Upper in circa 60 minuti (21 serie), le Lower in 63 (22 serie). Per starci:
+//   · un esercizio di core per seduta, 2 serie (il core lavora già nei multiarticolari; la regola del 6 luglio sui due
+//     core l'ha superata lui, il 24 novembre);
+//   · le trazioni a 2 serie (i dorsali arrivano a 10 anche così);
+//   · spalle e braccia anche nelle Lower, come riempitivi leggeri nel recupero delle gambe (Cressey);
+//   · il core in un blocco suo, mai in coppia con un multiarticolare (ZTRotazione.blocchi).
+// Poi si riempie: finché un muscolo è sotto il minimo, una serie in più a un suo isolamento (fino a 4, i polpacci 5),
+// poi a un multiarticolare che lo guida (fino a 4, mai le trazioni), poi un isolamento nuovo dal catalogo nella seduta
+// con più tempo libero (spalle e braccia prima nelle Upper, poi nelle Lower). Se una seduta resta sopra il tetto, i
+// tagli del Training 410 (la mossa che costa meno ai minimi). Con `pump` si aggiunge la Upper Pump facoltativa: 11
+// serie di spalle e braccia in circa 36 minuti, fuori dal giro (ZTRotazione.FACOLTATIVA). Poi i blocchi.
+const TETTO_SEDUTA_SEC = 3660;   // Upper: 61 minuti, cioè 21 serie con tre voci di riscaldamento («circa 60»)
+const TETTO_LOWER_SEC = 3780;    // Lower: 63 minuti (Ignazio, 24 novembre 2026)
+const _VOL_UPPER = ['petto', 'dorsali', 'deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti'];
+const _PUMP_SERIE = [['deltoidi laterali', 3], ['deltoidi posteriori', 3], ['bicipiti', 3], ['tricipiti', 2]];
 function _tettoRiga(ex) { return (typeof _exInfoCatalogo === 'function' ? _exInfoCatalogo(ex) : null) || {}; }
 function _tettoPattern(ex) { return _normPattern(ex.pattern || _tettoRiga(ex).pattern); }
+function _tettoGruppi(ex) { return String(ex.gruppo_target || _tettoRiga(ex).gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean); }
 function _tettoDurata(sess, tabata) { return ZTRotazione.durataSeduta(sess, { tabata: !!tabata }); }
-// Le mosse possibili su una seduta: [{ sess, ex, tipo, serie, rango, fai }]
+function _eLower(sess) { return /^lower|^legs/i.test(String(sess && sess.id || '')); }
+function _tettoDi(sess, o) { return (o && o.tetto) || (_eLower(sess) ? TETTO_LOWER_SEC : TETTO_SEDUTA_SEC); }
+// Le mosse di taglio su una seduta (Training 410): [{ sess, ex, tipo, serie, rango, fai }]
 function _tettoMosse(sess) {
   const out = [];
   (sess.exercises || []).filter(Boolean).forEach(ex => {
     const n = Number(ex.sets) || 0, pat = _tettoPattern(ex);
-    const core = pat === 'core', iso = !core && (pat === 'isolamento' || ex.iso), multi = !core && !iso;
+    const core = pat === 'core', iso = !core && (pat === 'isolamento' || ex.iso);
     if (ex.cardine) return;
     if (n > 2) {
       const rango = core ? 0 : iso ? 1 : 3;
@@ -1604,49 +1634,211 @@ function _tettoMosse(sess) {
   });
   return out;
 }
-// Porta ogni seduta di lavoro sotto il tetto e la divide in blocchi. Cambia le sedute passate (jsonb della scheda) e
-// ritorna il diario: [{ sid, prima, dopo, serie: [prima, dopo], mosse: [testo], blocchi: ['A: A1 EX… + A2 EX…'], sopra }]
-//   o: { obiettivo, tabata: bool | (sess) → bool, tetto }
+// Un isolamento nuovo dal catalogo per un gruppo, mappato con le regole del generatore. null se non c'è.
+function _tettoNuovoIso(o, sess, gruppo, usati, sp) {
+  // col blocco prima (cardiniDa): mai un esercizio che là stava in un'altra seduta (Training 070, i complementari non cambiano seduta)
+  const altrove = new Set(((o.prima && o.prima.sessioni) || []).filter(p => p && p.id !== sess.id).flatMap(p => (p.exercises || []).map(e => e && e.codice)));
+  const pool = (o.pool || []).filter(e => !usati.has(e.codice) && !altrove.has(e.codice) && !((sess.warmup || []).some(w => w && w.codice === e.codice)));
+  const idx = Number(o.indice) || 0;   // il primo del catalogo in ordine di codice, come il generatore
+  // il primo che passa le cautele della persona (le sue limitazioni): chi non le passa lascia il posto al successivo
+  const mappa = new Map((o.pool || []).map(e => [e.codice, e]));
+  const scartati = new Set(usati);
+  let w = [];
+  for (let k = 0; k < 12 && !w.length; k++) {
+    const cat = _trainGenPickIsoByGruppoTarget(pool.filter(e => _normPattern(e.pattern) === 'isolamento'), gruppo, scartati, idx, `volume ${gruppo}`);
+    if (!cat) return null;
+    scartati.add(cat.codice);
+    w = _trainGenApplyCautions([cat], o.limitazioni || [], mappa, new Set(mappa.keys())).filter(x => x && x.ex && !usati.has(x.ex.codice));
+  }
+  if (!w.length) return null;
+  const meta = { id: sess.id, name: sess.name, type: sess.type, rir: sess.rir, label: sess.label, rest: sess.rest, duration_min: null, perVolume: { [w[0].ex.codice]: gruppo } };
+  const ex = _trainGenMapToSession(w, meta, sp, null, o.tipoAllen || 'casa', new Set(o.attrezzatura || [])).exercises[0];
+  return ex || null;
+}
+function _tettoSp(o, sess) {
+  return (o.sp && o.sp(sess)) || sess._sp || _trainGenResolveSessionParams(o.obiettivo, o.livello || 'intermedio', sess.type === 'Pump' ? 'Pump' : (sess.type || 'Ipertrofia'), true);
+}
+// Porta la scheda alla regola D e la divide in blocchi. Cambia le sedute passate (jsonb della scheda; la Pump si
+// aggiunge all'array) e ritorna il diario: [{ sid, prima, dopo, serie: [prima, dopo], mosse, blocchi, sopra }]
+//   o: { obiettivo, tabata, pool (righe di catalogo ammesse), limitazioni, tipoAllen, attrezzatura, livello,
+//        pump: bool, prima (la scheda del blocco prima), tetto (per le prove) }
 function schedaEntroUnOra(sessioni, o) {
   o = o || {};
-  const tetto = Number(o.tetto) || TETTO_SEDUTA_SEC;
-  const lavoro = (sessioni || []).filter(s => s && Array.isArray(s.exercises) && s.type !== 'Recupero' && s.type !== 'Riposo' && !/^(recovery|rest)/i.test(s.id || ''));
+  const fac = ZTRotazione.FACOLTATIVA;
+  const lavoro = (sessioni || []).filter(s => s && Array.isArray(s.exercises) && s.id !== fac && s.type !== 'Recupero' && s.type !== 'Riposo' && !/^(recovery|rest)/i.test(s.id || ''));
   const tab = (sess) => typeof o.tabata === 'function' ? o.tabata(sess) : o.tabata;
   const serieDi = (sess) => sess.exercises.reduce((a, e) => a + (Number(e && e.sets) || 0), 0);
+  const libero = (sess) => _tettoDi(sess, o) - _tettoDurata(sess, tab(sess));
+  const SERIE = ZTRotazione.TEMPO.serieMisurata;
   const diario = lavoro.map(sess => ({ sess, sid: sess.id, prima: _tettoDurata(sess, tab(sess)), serie: [serieDi(sess)], mosse: [] }));
-  const mancano = () => volumeContoMinimi(lavoro, o.obiettivo, _tettoRiga).reduce((n, c) => n + Math.max(0, c.minimo - c.serie), 0);
-  for (let giri = 0; giri < 200; giri++) {
-    const sopra = diario.filter(d => _tettoDurata(d.sess, tab(d.sess)) > tetto);
-    if (!sopra.length) break;
-    const base = mancano();
-    let migliore = null;
-    sopra.forEach(d => _tettoMosse(d.sess).forEach(m => {
-      // il costo si misura facendo la mossa su una copia della seduta
-      const copia = { ...d.sess, exercises: d.sess.exercises.map(e => ({ ...e })) };
-      const idx = d.sess.exercises.indexOf(m.ex);
-      if (m.tipo === 'meno') copia.exercises[idx].sets = (Number(m.ex.sets) || 0) - 1; else copia.exercises.splice(idx, 1);
-      const tutte = lavoro.map(s => s === d.sess ? copia : s);
-      const costo = (volumeContoMinimi(tutte, o.obiettivo, _tettoRiga).reduce((n, c) => n + Math.max(0, c.minimo - c.serie), 0) - base) / m.serie;
-      const eccesso = _tettoDurata(d.sess, tab(d.sess)) - tetto;
-      const k = [costo, m.rango, -eccesso];
-      if (!migliore || k[0] < migliore.k[0] - 1e-9 || (Math.abs(k[0] - migliore.k[0]) < 1e-9 && (k[1] < migliore.k[1] || (k[1] === migliore.k[1] && k[2] < migliore.k[2])))) migliore = { m, d, k };
+  const di = (sess) => diario.find(d => d.sess === sess);
+  // 1 · un core per seduta, 2 serie; trazioni a 2 serie
+  lavoro.forEach(sess => {
+    const d = di(sess);
+    const core = sess.exercises.filter(e => e && _tettoPattern(e) === 'core');
+    core.slice(1).forEach(e => { sess.exercises = sess.exercises.filter(x => x !== e); d.mosse.push(`via ${e.codice} ${e.name} (un core per seduta)`); });
+    if (core[0] && Number(core[0].sets) !== 2) { d.mosse.push(`${core[0].codice} da ${core[0].sets} a 2 serie`); core[0].sets = 2; }
+    sess.exercises.filter(e => e && _tettoPattern(e) === 'tirata verticale' && Number(e.sets) > 2).forEach(e => { d.mosse.push(`${e.codice} da ${e.sets} a 2 serie`); e.sets = 2; });
+  });
+  // 2 · si riempie fino ai minimi. Quando un muscolo non trova posto, si libera tempo dove avanza: una serie in meno
+  //     (o un isolamento in meno) che non porta nessun muscolo sotto il minimo, se così il muscolo trova posto.
+  const usati = new Set(lavoro.flatMap(s => s.exercises.map(e => e && e.codice).filter(Boolean)));
+  const bloccati = new Set();
+  const conSpazio = (sess, n) => libero(sess) >= n * SERIE;
+  const massimo = (ex) => _tettoGruppi(ex)[0] === 'polpacci' ? 5 : 4;
+  // dove c'è il posto che basta, il più stretto: così non restano buchi da una serie sola che nessuno può usare
+  const perSpazio = (a, b) => libero(a.sess) - libero(b.sess);
+  const sottoDi = () => volumeContoMinimi(lavoro, o.obiettivo, _tettoRiga).filter(c => c.sotto);
+  const azionePer = (g, manca) => {
+    // a) una serie in più a un isolamento del gruppo
+    const iso = lavoro.flatMap(sess => sess.exercises.filter(e => e && !e.cardine && _tettoPattern(e) === 'isolamento' && _tettoGruppi(e)[0] === g && Number(e.sets) < massimo(e)).map(ex => ({ sess, ex })))
+      .filter(x => conSpazio(x.sess, 1)).sort(perSpazio)[0];
+    if (iso) return { sess: iso.sess, testo: `${g}: ${iso.ex.codice} a ${Number(iso.ex.sets) + 1} serie`, fai: () => { iso.ex.sets = Number(iso.ex.sets) + 1; } };
+    // b) una serie in più a un multiarticolare che guida il gruppo (mai le trazioni)
+    const multi = lavoro.flatMap(sess => sess.exercises.filter(e => {
+      if (!e || Number(e.sets) >= 4) return false;   // anche un cardine: una serie in più, mai una in meno
+      const pat = _tettoPattern(e), cr = _volCrediti(pat, _tettoGruppi(e));
+      return cr && cr[g] === 1 && pat !== 'tirata verticale';
+    }).map(ex => ({ sess, ex }))).filter(x => conSpazio(x.sess, 1)).sort(perSpazio)[0];
+    if (multi) return { sess: multi.sess, testo: `${g}: ${multi.ex.codice} a ${Number(multi.ex.sets) + 1} serie`, fai: () => { multi.ex.sets = Number(multi.ex.sets) + 1; } };
+    // b2) se manca mezza serie: un multiarticolare che aiuta il gruppo (½), fino a 4
+    const aiuta = manca <= 0.5 ? lavoro.flatMap(sess => sess.exercises.filter(e => {
+      if (!e || Number(e.sets) >= 4) return false;
+      const pat = _tettoPattern(e), cr = _volCrediti(pat, _tettoGruppi(e));
+      return cr && cr[g] === 0.5 && pat !== 'tirata verticale';
+    }).map(ex => ({ sess, ex }))).filter(x => conSpazio(x.sess, 1)).sort(perSpazio)[0] : null;
+    if (aiuta) return { sess: aiuta.sess, testo: `${g}: ${aiuta.ex.codice} a ${Number(aiuta.ex.sets) + 1} serie`, fai: () => { aiuta.ex.sets = Number(aiuta.ex.sets) + 1; } };
+    // c) un isolamento nuovo: spalle e braccia prima nelle Upper, poi nelle Lower; le gambe nelle Lower
+    const sopra = _VOL_UPPER.includes(g);
+    // prima una seduta dove l'isolamento entra con le serie che servono (fino a 3), poi una dove ne entrano almeno 2
+    const serve = Math.max(2, Math.min(3, Math.ceil(manca)));
+    const ordinaDove = (a, b) => ((sopra && _eLower(a)) - (sopra && _eLower(b))) || (libero(a) - libero(b));
+    const candidate = lavoro.filter(sess => sopra ? true : _eLower(sess));
+    const dove = candidate.filter(sess => conSpazio(sess, serve)).sort(ordinaDove)[0] || candidate.filter(sess => conSpazio(sess, 2)).sort(ordinaDove)[0];
+    const nuovo = dove ? _tettoNuovoIso(o, dove, g, usati, _tettoSp(o, dove)) : null;
+    if (!nuovo) return null;
+    nuovo.sets = Math.max(2, Math.min(4, Math.ceil(manca), Math.floor(libero(dove) / SERIE)));
+    if (sopra && _eLower(dove)) nuovo.riempitivo = true;
+    return { sess: dove, testo: `${g}: + ${nuovo.codice} ${nuovo.name} × ${nuovo.sets}${nuovo.riempitivo ? ' (riempitivo)' : ''}`,
+      fai: () => { dove.exercises.push(nuovo); usati.add(nuovo.codice); } };
+  };
+  // le mosse che liberano tempo senza portare nessun muscolo sotto il minimo: [{ sess, testo, fai, disfa }]
+  const liberano = () => {
+    const out = [];
+    lavoro.forEach(sess => sess.exercises.forEach(ex => {
+      if (!ex || ex.cardine || _tettoPattern(ex) === 'core') return;
+      const n = Number(ex.sets) || 0, iso = _tettoPattern(ex) === 'isolamento';
+      if (n > 2) out.push({ sess, testo: `${ex.codice} da ${n} a ${n - 1} serie (avanzava)`, fai: () => { ex.sets = n - 1; }, disfa: () => { ex.sets = n; } });
+      if (iso) out.push({ sess, testo: `via ${ex.codice} ${ex.name} (avanzava)`, fai: () => { sess.exercises = sess.exercises.filter(e => e !== ex); }, disfa: () => { sess.exercises.push(ex); } });
     }));
-    if (!migliore) break;
-    migliore.m.fai(); migliore.d.mosse.push(migliore.m.testo);
+    return out;
+  };
+  // riempire e tagliare si ripetono finché la scheda non cambia più: un taglio può liberare più tempo del necessario,
+  // e una seconda passata (lo script lanciato due volte) non deve trovare niente da fare
+  const mancano = (tutte) => volumeContoMinimi(tutte, o.obiettivo, _tettoRiga).reduce((n, c) => n + Math.max(0, c.minimo - c.serie), 0);
+  for (let passata = 0; passata < 5; passata++) {
+    const firma = () => JSON.stringify(lavoro.map(x => x.exercises.map(e => e && (e.codice + ':' + e.sets))));
+    const primaFirma = firma();
+    bloccati.clear();
+    // prima di riempire, via il superfluo: le serie che tengono un muscolo sopra il minimo senza servirgli (per esempio
+    // i quadricipiti a 12), così il tempo va a chi è sotto. Solo serie in meno, mai esercizi tolti, mai i cardini.
+    for (let giri = 0; giri < 40; giri++) {
+      const primaConto = new Map(volumeContoMinimi(lavoro, o.obiettivo, _tettoRiga).map(c => [c.gruppo, c]));
+      const ok = liberano().filter(m => !/^via /.test(m.testo)).find(m => {
+        m.fai();
+        const male = volumeContoMinimi(lavoro, o.obiettivo, _tettoRiga).some(c => { const p0 = primaConto.get(c.gruppo); return p0.sotto ? c.serie < p0.serie : c.serie < c.minimo; });
+        m.disfa();
+        return !male;
+      });
+      if (!ok) break;
+      ok.fai(); di(ok.sess).mosse.push(ok.testo);
+    }
+    for (let giri = 0; giri < 150; giri++) {
+      // prima i muscoli che trovano posto solo nelle Upper (petto, dorsali, tricipiti: si riempiono coi multiarticolari),
+      // poi le gambe, per ultimi spalle e bicipiti, che possono stare anche nelle Lower come riempitivi
+      const ordine = (g) => ['petto', 'dorsali', 'tricipiti'].includes(g) ? 0 : _VOL_UPPER.includes(g) ? 2 : 1;
+      const sotto = sottoDi().filter(c => !bloccati.has(c.gruppo)).sort((a, b) => (ordine(a.gruppo) - ordine(b.gruppo)) || ((b.minimo - b.serie) - (a.minimo - a.serie)));
+      if (!sotto.length) break;
+      const g = sotto[0].gruppo, manca = sotto[0].minimo - sotto[0].serie;
+      let az = azionePer(g, manca);
+      if (!az) {
+        // si libera tempo dove avanza, se serve a questo muscolo
+        // una mossa è buona se nessun muscolo perde serie sotto il suo minimo: chi era sopra resta sopra, chi era sotto non scende
+        const primaConto = new Map(volumeContoMinimi(lavoro, o.obiettivo, _tettoRiga).map(c => [c.gruppo, c]));
+        const peggio = () => volumeContoMinimi(lavoro, o.obiettivo, _tettoRiga).some(c => {
+          const p0 = primaConto.get(c.gruppo);
+          return p0.sotto ? c.serie < p0.serie : c.serie < c.minimo;
+        });
+        // prima una mossa sola; se non basta, due nella stessa seduta (un isolamento nuovo chiede due serie di posto)
+        const mosse = liberano();
+        for (const m of mosse) {
+          m.fai();
+          const tenta = peggio() ? null : azionePer(g, manca);
+          if (tenta) { di(m.sess).mosse.push(m.testo); az = tenta; break; }
+          m.disfa();
+        }
+        for (let x = 0; !az && x < mosse.length; x++) for (let y = x + 1; !az && y < mosse.length; y++) {
+          const m1 = mosse[x], m2 = mosse[y];
+          if (m1.sess !== m2.sess || m1.testo.split(' ')[0] === m2.testo.split(' ')[0] && /^via/.test(m1.testo + m2.testo)) continue;
+          m1.fai(); m2.fai();
+          const tenta = peggio() ? null : azionePer(g, manca);
+          if (tenta) { di(m1.sess).mosse.push(m1.testo, m2.testo); az = tenta; break; }
+          m2.disfa(); m1.disfa();
+        }
+      }
+      if (!az) { bloccati.add(g); continue; }
+      az.fai(); di(az.sess).mosse.push(az.testo);
+    }
+    // 3 · se una seduta è sopra il suo tetto, i tagli del Training 410 (la mossa che costa meno ai minimi)
+    for (let giri = 0; giri < 200; giri++) {
+      const fuori = diario.filter(d => libero(d.sess) < 0);
+      if (!fuori.length) break;
+      const base = mancano(lavoro);
+      let migliore = null;
+      fuori.forEach(d => _tettoMosse(d.sess).forEach(m => {
+        const copia = { ...d.sess, exercises: d.sess.exercises.map(e => ({ ...e })) };
+        const idx = d.sess.exercises.indexOf(m.ex);
+        if (m.tipo === 'meno') copia.exercises[idx].sets = (Number(m.ex.sets) || 0) - 1; else copia.exercises.splice(idx, 1);
+        const costo = (mancano(lavoro.map(s => s === d.sess ? copia : s)) - base) / m.serie;
+        const k = [costo, m.rango, libero(d.sess)];
+        if (!migliore || k[0] < migliore.k[0] - 1e-9 || (Math.abs(k[0] - migliore.k[0]) < 1e-9 && (k[1] < migliore.k[1] || (k[1] === migliore.k[1] && k[2] < migliore.k[2])))) migliore = { m, d, k };
+      }));
+      if (!migliore) break;
+      migliore.m.fai(); migliore.d.mosse.push(migliore.m.testo);
+    }
+  if (firma() === primaFirma) break;
   }
-  return diario.map(d => {
-    const sess = d.sess;
-    // i blocchi: da zero, le coppie del 400 non servono più
-    sess.exercises.forEach(e => { delete e.blocco; delete e.riempitivo; delete e.coppia; });
+  // 4 · la Upper Pump facoltativa
+  let pump = null;
+  if (o.pump && (o.pool || []).length && !(sessioni || []).some(s => s && s.id === fac)) {
+    const upper = lavoro.find(s => !_eLower(s)) || lavoro[0];
+    pump = { id: fac, name: 'Upper Pump', type: 'Pump', facoltativa: true, rir: null, label: 'Upper Pump — facoltativa', rest: '60 sec', exercises: [],
+      warmup: upper ? ZTRotazione.riscaldamentoBreve(upper.warmup || []) : [] };
+    const sp = _tettoSp(o, pump);
+    pump.rir = sp.rir != null ? sp.rir : null;
+    _PUMP_SERIE.forEach(([g, n]) => {
+      const ex = _tettoNuovoIso(o, pump, g, usati, sp);   // solo esercizi che non sono già nella base
+      if (!ex) return;
+      ex.sets = n; delete ex.perVolume;
+      pump.exercises.push(ex); usati.add(ex.codice);
+    });
+    if (pump.exercises.length) sessioni.push(pump); else pump = null;
+  }
+  // 5 · i blocchi (le coppie del 400 non servono più); spalle e braccia nelle Lower sono riempitivi
+  const conPump = pump ? lavoro.concat([pump]) : lavoro;
+  const righe = conPump.map(sess => {
+    sess.exercises.forEach(e => { delete e.blocco; delete e.coppia; if (!(_eLower(sess) && _VOL_UPPER.includes(_tettoGruppi(e)[0]) && _tettoPattern(e) === 'isolamento')) delete e.riempitivo; else e.riempitivo = true; });
     const bl = ZTRotazione.blocchi(sess, { unilaterale: ex => ex.unilaterale || _tettoRiga(ex).unilaterale });
     const ordine = [];
     bl.forEach(b => b.voci.forEach(v => { v.ex.blocco = b.lettera; if (v.riempitivo) v.ex.riempitivo = true; ordine.push(v.ex); }));
     sess.exercises = ordine;
+    const d = di(sess) || { sid: sess.id, prima: 0, serie: [0], mosse: ['nuova: la seduta facoltativa'] };
     const dopo = _tettoDurata(sess, tab(sess));
-    return { sid: d.sid, prima: d.prima, dopo, serie: [d.serie[0], serieDi(sess)], mosse: d.mosse,
-      blocchi: bl.map(b => `${b.lettera} ${b.titolo}: ` + b.voci.map(v => `${v.tag} ${v.ex.codice}×${v.ex.sets}${v.riempitivo ? ' (riempitivo)' : ''}`).join(' + ')),
-      sopra: dopo > tetto };
+    return { sid: d.sid, prima: d.prima, dopo, serie: [d.serie[0], serieDi(sess)], mosse: d.mosse, facoltativa: sess.id === fac,
+      blocchi: bl.map(b => `${b.lettera} ${b.titolo}: ` + b.voci.map(v => `${v.tag} ${v.ex.codice}×${v.ex.sets}${v.ex.riempitivo ? ' (riempitivo)' : ''}`).join(' + ')),
+      sopra: sess.id !== fac && dopo > _tettoDi(sess, o) };
   });
+  return righe;
 }
 // Criticità isolamenti per il TAGLIO PER TEMPO (Regola A): peso più BASSO =
 // MENO critico = rimosso PRIMA. Vincoli documentati dall'utente:
@@ -2823,7 +3015,10 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // obbligatoria + no crash. Esercizi fantasma → skip + warning.
     const sessioniValidate = _trainGenValidateCodes(sessioniFinali, catalogMap);
     // Training 400: ogni seduta sta in un'ora, preparazione compresa (il Tabata conta se è sempre in coda)
-    const tettoDiario = schedaEntroUnOra(sessioniValidate, { obiettivo, tabata: !!(profile && profile.tabata === 'coda') });
+    // Training 420: la base che porta ogni muscolo a 10 serie, i blocchi e, a 4 giorni, la Upper Pump facoltativa
+    const tettoDiario = schedaEntroUnOra(sessioniValidate, { obiettivo, tabata: !!(profile && profile.tabata === 'coda'),
+      pool: pools.poolPrincipali, limitazioni, tipoAllen, attrezzatura: Array.from(attrezzaturaSet), livello, catalogo: catalogMap, prima: cardiniDa,
+      pump: Number(giorni) === 4 });
 
     // BLOCCO 12 — NOTA MOTIVAZIONALE AI (voce coach)
     // Una singola chiamata callAI con fallback fisso se fallisce o vuoto.

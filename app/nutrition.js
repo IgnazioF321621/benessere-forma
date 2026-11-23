@@ -186,6 +186,7 @@ function sedutaDomani(){
     if (giorniScelti) {
       const domani = _giornoAccanto(todayKey(), 1);
       const prevista = ZTRotazione.sedutePreviste({ allenamenti: hd.ultimi || [], ciclo: getRotationCycle(), oggi: todayKey(), giorni: giorniScelti, settimane: 1,
+        facoltativa: !!(ST.userTrainingSessions && ST.userTrainingSessions[ZTRotazione.FACOLTATIVA]),
         profile: ST.profile, fattaOggi: hd.inProgress ? hd.lastSession : null }).find(e => e.date === domani);
       if (!prevista) return { state:'riposo', label:'' };
       const sd = getTrainingSession(prevista.sid) || {};

@@ -83,6 +83,10 @@ var ZTQuadro = (function(){
     return daily;
   }
 
+  // La seduta facoltativa (Training 420, 24 novembre 2026): la Upper Pump che si aggiunge alle quattro di base quando
+  // c'è il giorno. Non sta nel giro della rotazione e non conta nelle settimane del blocco: chi non la fa non resta
+  // indietro di niente (Training 530, nessun debito).
+  var FACOLTATIVA = 'pump';
   // Giorni di LAVORO per giro, dal ciclo della scheda attiva: 5 con la Upper Pump, altrimenti 4.
   function workPerGiroForCycle(cycleIds){
     var ids = Array.isArray(cycleIds) ? cycleIds : [];
@@ -102,7 +106,7 @@ var ZTQuadro = (function(){
     var oggi = o.asOf || o.today;
     var sorgente = o.completed || [];
     var completati = o.asOf ? sorgente.filter(function(w){ return w && w.date <= o.asOf; }) : sorgente;
-    var isWork = function(w){ return w && !/^recovery/i.test(w.session_type); };
+    var isWork = function(w){ return w && !/^recovery/i.test(w.session_type) && w.session_type !== FACOLTATIVA; };   // la Pump facoltativa non fa avanzare il blocco (Training 420)
     var workCount = completati.filter(isWork).length;
     var wpg = Math.max(1, o.workPerGiro || 1);
     var ancora = (o.deloads || []).filter(function(d){ return d && d <= oggi; }).sort().pop() || null;
@@ -609,7 +613,7 @@ var ZTQuadro = (function(){
   return {
     WP_VERSION: WP_VERSION, WP_FASCIA: WP_FASCIA, inFascia: inFascia, giornoScarso: giornoScarso, parolaSettimana: parolaSettimana, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
-    workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
+    FACOLTATIVA: FACOLTATIVA, workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
     pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, pausaPeriodi: pausaPeriodi, rientro: rientro, serieRientro: serieRientro, RIENTRO: RIENTRO, rirSettimana: rirSettimana, RIR_SETTIMANE: RIR_SETTIMANE, PAUSA_MODULI: PAUSA_MODULI,
     serieSettimanaliPreviste: serieSettimanaliPreviste,
     fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,

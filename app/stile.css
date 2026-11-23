@@ -3230,3 +3230,10 @@ html.v5 #page-body :is(.an-pan-sotto,.an-pan-num small,.an-val-nome small,.an-va
 .adesso5-banda{flex:1;min-width:56px;min-height:36px;border:1px solid var(--s3);background:var(--bianco);color:var(--t1);border-radius:8px;font-family:var(--font-sans);font-size:13px;font-weight:700;cursor:pointer;}
 .adesso5-banda.on{background:var(--acc);border-color:var(--acc);color:var(--bianco);}
 .adesso5-registro-pieno{font-family:var(--font-mono);font-size:11px;color:var(--acc);text-align:center;}
+
+/* Training 420: la Upper Pump facoltativa nel Programma */
+.pump5-card{background:var(--s1);border:1px dashed var(--s3);border-radius:10px;padding:12px 13px;margin:0 0 10px;cursor:pointer;}
+.pump5-testa{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.pump5-nome{font-family:var(--font-sans);font-size:15px;font-weight:800;color:var(--t1);}
+.pump5-chip{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--acc);background:var(--acc-lt);padding:2px 7px;border-radius:999px;white-space:nowrap;}
+.pump5-sotto{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--t3);text-transform:uppercase;}

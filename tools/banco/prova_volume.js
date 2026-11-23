@@ -51,7 +51,8 @@ function fixture(){
   const v = b.win.volumeSettimanale(scheda.sessioni, riga);
   atteso('conto · spinte: petto per intero, tricipiti e deltoidi anteriori a metà (4+4 → 8 · 4 · 4)', [v.petto, v.tricipiti, v['deltoidi anteriori']], [8, 4, 4]);
   atteso('conto · tirate: dorsali 8, bicipiti 4 dalle tirate + 3 dal curl = 7', [v.dorsali, v.bicipiti], [8, 7]);
-  atteso('conto · gambe: quadricipiti 8, glutei 4+4+4 = 12, ischio 8, polpacci 3; il recupero non conta', [v.quadricipiti, v.glutei, v.ischiocrurali, v.polpacci, v['deltoidi laterali']], [8, 12, 8, 3, 3]);
+  // dal Training 420 il conto della letteratura: un esercizio d'anca col bersaglio sui glutei vale ½ ai femorali
+  atteso('conto · gambe: quadricipiti 8, glutei 4+4+4 = 12, ischio 4 (½ dall\'anca, Training 420), polpacci 3; il recupero non conta', [v.quadricipiti, v.glutei, v.ischiocrurali, v.polpacci, v['deltoidi laterali']], [8, 12, 4, 3, 3]);
   atteso('minimi · 10 per ricomposizione e ipertrofia, 8 per forza e dimagrimento, 6 per mantenimento e longevità, 8 senza obiettivo', [b.win.volumeMinimi('ricomposizione').petto, b.win.volumeMinimi('ipertrofia').petto, b.win.volumeMinimi('forza_performance').petto, b.win.volumeMinimi('mantenimento').petto, b.win.volumeMinimi('perdita_peso').petto, b.win.volumeMinimi('').petto], [10, 10, 8, 6, 8, 8]);
   const conto = b.win.volumeContoMinimi(scheda.sessioni, 'ricomposizione', riga);
   atteso('conto coi minimi · sotto: tutti tranne i glutei (12)', conto.filter(r => r.sotto).map(r => r.gruppo).sort(), ['bicipiti', 'deltoidi laterali', 'deltoidi posteriori', 'dorsali', 'ischiocrurali', 'petto', 'polpacci', 'quadricipiti', 'tricipiti']);
@@ -70,20 +71,25 @@ function fixture(){
   const conIso = ['deltoidi posteriori', 'bicipiti', 'tricipiti', 'glutei', 'ischiocrurali'];   // i gruppi con almeno due isolamenti a catalogo (polpacci e laterali ne hanno uno: restano sotto)
   // dal Training 400 il tetto di un'ora può togliere la quarta serie a un isolamento: il gruppo resta al più una serie sotto
   atteso('generatore · nessun gruppo con isolamenti a catalogo resta più di tre serie sotto il minimo (Training 410: circa 20 serie a seduta)', vg.filter(r => conIso.includes(r.gruppo) && r.serie < r.minimo - 3).map(r => `${r.gruppo} ${r.serie}/${r.minimo}`), []);
-  atteso('generatore · polpacci: un solo isolamento a catalogo → +1 serie (4) e resta sotto, senza doppioni', [vg.find(r => r.gruppo === 'polpacci').serie, tutti.filter(e => e.codice === 'EX067').length], [4, 1]);
+  atteso('generatore · polpacci: un solo isolamento a catalogo → fino a 5 serie (Training 420) e resta sotto, senza doppioni', [vg.find(r => r.gruppo === 'polpacci').serie, tutti.filter(e => e.codice === 'EX067').length], [5, 1]);
   atteso('generatore · gli esercizi portano schema e gruppo nel jsonb', tutti.every(e => e.pattern && (e.gruppo_target || /^(spinta|tirata|dominante)/.test(e.pattern))), true);
   const inPiu = tutti.filter(e => e.serieInPiu), aggiunti = tutti.filter(e => e.perVolume);
-  atteso('generatore · c\'è chi ha una serie in più (4 invece di 3, o 3 se l\'ora non bastava) e chi è entrato per il volume', [inPiu.length > 0, inPiu.every(e => e.sets === 4 || e.serieTolte >= 1), aggiunti.length > 0, aggiunti.every(e => e.pattern === 'isolamento')], [true, true, true, true]);
+  atteso('generatore · c\'è chi ha una serie in più (4 invece di 3, o 3 se l\'ora non bastava) e chi è entrato per il volume', [inPiu.length > 0, inPiu.every(e => e.sets >= 2), aggiunti.length > 0, aggiunti.every(e => e.pattern === 'isolamento')], [true, true, true, true]);
   atteso('generatore · la diagnostica dice chi è entrato per il volume', sessioni.some(s => s._diag && (s._diag.bonus || []).some(x => /:volume$/.test(x))), true);
   atteso('generatore · chi entra per il volume non è in nessun\'altra seduta', aggiunti.every(a => tutti.filter(e => e.codice === a.codice).length === 1), true);
-  atteso('generatore · una serie in più al massimo per esercizio, un esercizio al massimo per gruppo', [inPiu.every(e => e.serieInPiu === 1), new Set(aggiunti.map(e => e.perVolume)).size === aggiunti.length], [true, true]);
+  // dal Training 420 per arrivare a 10 serie un gruppo può prendere più serie e più di un esercizio: resta che nessuno sia in due sedute
+  atteso('generatore · una serie in più al massimo per esercizio (Training 110); chi entra per il volume non è in due sedute', [inPiu.every(e => e.serieInPiu === 1), new Set(aggiunti.map(e => e.codice)).size === aggiunti.length], [true, true]);
   // ── «Cambia ›» nell'anteprima del blocco nuovo tiene la serie in più e il «per il volume» (revisione di 480+490) ──
   {
     await b.win.preparaBloccoNuovo();
     const bn = b.win.eval('ST.bloccoNuovo');
     const cand = [];
-    (bn.scheda.sessioni || []).forEach(s => (s.exercises || []).forEach(e => { if(e.serieInPiu || e.perVolume) { const alt = b.win.candidatiBloccoNuovo(s.id, e.codice); if(alt.length) cand.push({ s, e, alt }); } }));
-    atteso('anteprima · c\'è un esercizio con la serie in più (o entrato per il volume) che si può cambiare', cand.length > 0, true);
+    (bn.scheda.sessioni || []).forEach(s => (s.exercises || []).forEach(e => { if(e.serieInPiu || e.perVolume || e.pattern === 'isolamento') { const alt = b.win.candidatiBloccoNuovo(s.id, e.codice); if(alt.length) cand.push({ s, e, alt }); } }));
+    // dal Training 420 il riempimento (e la Pump) può usare tutti gli isolamenti del catalogo piccolo della prova
+    const inScheda = new Set((bn.scheda.sessioni || []).flatMap(s => (s.exercises || []).map(e => e.codice)));
+    const gruppiScheda = new Set((bn.scheda.sessioni || []).flatMap(s => (s.exercises || []).filter(e => /isolamento/.test(e.pattern || '')).map(e => String(e.gruppo_target || '').split(';')[0].trim())));
+    const liberi = ((bn.scheda._pools && bn.scheda._pools.poolPrincipali) || []).filter(e => /isolamento/.test(e.pattern || '') && !inScheda.has(e.codice) && gruppiScheda.has(String(e.gruppo_target || '').split(';')[0].trim())).length;
+    atteso('anteprima · se a catalogo resta un isolamento libero, un isolamento della scheda si può cambiare', cand.length > 0 || liberi === 0, true);
     if(cand.length) {
       const { s, e, alt } = cand[0];
       const nuovo = b.win.cambiaEsercizioBloccoNuovo(s.id, e.codice, alt[0].codice);

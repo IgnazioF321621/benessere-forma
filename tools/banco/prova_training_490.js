@@ -165,7 +165,8 @@ async function nuovo(o){
     const vPrima = a.W.volumeSettimanale(schedaVera.sessioni, riga);
     const dopoS = JSON.parse(JSON.stringify(schedaVera)); dopoS.sessioni.forEach(s => s.exercises.forEach(e => { if(cambi.some(c => c.sid === s.id && c.codice === e.codice)) e.sets = 3; }));
     const vDopo = a.W.volumeSettimanale(dopoS.sessioni, riga);
-    atteso('3 · femorali da 10 a 9 serie a settimana (scelta di Ignazio: senza compensare); dorsali e quadricipiti da 14 a 12', [vPrima.ischiocrurali, vDopo.ischiocrurali, vPrima.dorsali, vDopo.dorsali, vPrima.quadricipiti, vDopo.quadricipiti], [10, 9, 14, 12, 14, 12]);
+    // dal Training 420 il conto della letteratura: lo stacco d'anca col bersaglio sui glutei vale ½ ai femorali
+    atteso('3 · femorali da 8 a 7,5 serie a settimana (scelta di Ignazio: senza compensare); dorsali e quadricipiti da 14 a 12', [vPrima.ischiocrurali, vDopo.ischiocrurali, vPrima.dorsali, vDopo.dorsali, vPrima.quadricipiti, vDopo.quadricipiti], [8, 7.5, 14, 12, 14, 12]);
 
     a.W.chiediConferma = async () => false;
     await a.W.accorciaSerieForza();
@@ -189,8 +190,9 @@ async function nuovo(o){
     const gen = await a.W.generateTrainingProgram({ source:'prova', force:true, dryRun:true });
     const forza = gen.sessioni.filter(s => s.type === 'Forza');
     const multi = forza.flatMap(s => s.exercises.filter(e => !e.iso && !e.durationBased));
-    atteso('4 · nelle sedute di forza ogni multiarticolare ha 3 serie e 3 minuti di recupero', [forza.length > 0, multi.length > 0, [...new Set(multi.map(e => e.sets + '×' + e.rest_sec))]], [true, true, ['3×180']]);
-    atteso('4 · e la scheda nuova non chiede più di accorciare', a.W.serieForzaDaTogliere(gen).length, 0);
+    // dal Training 420 le trazioni stanno a 2 serie e il volume può portare un multiarticolare a 4: il recupero resta 3 minuti
+    atteso('4 · nelle sedute di forza ogni multiarticolare ha da 2 a 4 serie e 3 minuti di recupero', [forza.length > 0, multi.length > 0, multi.every(e => e.sets >= 2 && e.sets <= 4 && e.rest_sec === 180)], [true, true, true]);
+    atteso('4 · e la scheda nuova (a blocchi) non chiede più di accorciare', a.W.serieForzaDaTogliere(gen).length, 0);
     atteso('4 · il Tabata resta nel jsonb (si riaccende senza rigenerare)', gen.sessioni.filter(s => /^(upper|lower)/.test(s.id)).every(s => s.finisher && s.finisher.exercises.length === 4), true);
   }
   // ── 5 · i rilievi della revisione di 480+490 (24 ottobre 2026 sera) ──
