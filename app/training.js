@@ -212,9 +212,27 @@ function _valoriProposti(sessionId, exName, setNum){
     else if(prossima.resistance != null){ const v = Math.round(Number(prossima.resistance) / 10) * 10; if(RESIST_VALUES.includes(v)) resist = v; }
     if(prossima.reps != null && prossima.reps > 0) reps = prossima.reps;
   }
-  return { reps, band, resist, versoBanda, timed, dueLati };
+  // Training 411: il carico si mostra (e si cambia nella riga «Adesso») se l'esercizio ha un attrezzo che pesa o un
+  // carico già scritto; a corpo libero, alla sbarra, sulla panca o sulla fitball no.
+  const SENZA_CARICO = ['corpo libero', 'fitball', 'panca', 'sbarra', 'tappetino', 'gradino', ''];
+  const attrezzi = String((ex && ex.eq) || '').toLowerCase().split(/[+,;]/).map(x => x.trim());
+  const conCarico = !versoBanda && (resist > 0 || attrezzi.some(a => !SENZA_CARICO.includes(a)));
+  return { reps, repsSx: dueLati ? reps : null, band, resist, versoBanda, timed, dueLati, conCarico };
+}
+// Il carico nella riga «Adesso» un passo su o giù, con i passi del registro (RESIST_VALUES)
+function adessoCarico(verso){
+  const d = ST.trainAdesso;
+  if(!d) return;
+  const i = RESIST_VALUES.indexOf(d.resist);
+  const j = i === -1 ? (verso > 0 ? RESIST_VALUES.findIndex(v => v > (d.resist || 0)) : RESIST_VALUES.filter(v => v < (d.resist || 0)).length - 1) : i + verso;
+  d.resist = RESIST_VALUES[Math.max(0, Math.min(RESIST_VALUES.length - 1, j === -1 ? 0 : j))];
+  renderTraining();
 }
 // La riga «Adesso»: cosa tocca, coi numeri già scritti, e «Fatta».
+// Training 411 (24 novembre 2026; Ignazio vedeva solo ripetizioni e RIR): il carico con − e + (o il colore dell'elastico
+// per gli esercizi a banda), i due lati negli esercizi per lato, l'attrezzo e la riga del surrogato, la volta prima o
+// la serie appena fatta col consiglio del coach, la nota dell'esercizio, il RIR della settimana. Il nome apre la scheda
+// dell'esercizio (GIF ed esecuzione).
 function _rigaAdessoHTML(sel, bl){
   const a = adessoDi(sel, bl);
   if(!a){
@@ -227,31 +245,54 @@ function _rigaAdessoHTML(sel, bl){
   }
   const d = ST.trainAdesso;
   const unit = (ST.profile && ST.profile.unit) || 'lbs';
-  const carico = d.versoBanda ? (d.band ? bandPhraseV(d.band, d.versoBanda) : 'scegli l\'elastico') : (d.resist ? caricoTesto(d.resist) : 'corpo libero');
   const perLato = _contaPerLato(ex) ? ' per lato' : '';
-  const rirChip = (v) => `<button type="button" class="adesso5-rir${d.rir === v ? ' on' : ''}" onclick="ST.trainAdesso.rir=${v === null ? 'null' : v};renderTraining();">${v === null ? '—' : v}</button>`;
   const safe = ex.name.replace(/'/g, "\\'");
+  const sess = getTrainingSession(sel);
+  const rirObiettivoOggi = (rirObiettivo(ex, sess) != null) ? rirDiOggi(ex, sess) : null;
+  // la riga di riferimento: alla prima serie la volta prima (rigaNumeriV5), dopo la serie appena fatta e il consiglio
+  let riferimento = '';
+  if(d.setNum <= 1){
+    const r = rigaNumeriV5(ex.name, sel);
+    if(r) riferimento = r.testo + (r.ultima ? ` · ${r.ultima}` : '');
+  } else {
+    const fatta = getLastLoggedSetLabel(sel, ex.name);
+    const consiglio = ST.aiSuggestions && ST.aiSuggestions[`${sel}_${ex.name}`];
+    riferimento = [fatta ? `Serie ${d.setNum - 1}: ${fatta}` : '', consiglio || ''].filter(Boolean).join(' · ');
+  }
+  const nota = ST.trainNotes && ST.trainNotes[ex.name];
+  const passo = (dove, meno, piu, valore, etichetta, id) => `<div class="adesso5-campo"><button type="button" aria-label="${etichetta}: meno" onclick="${meno};renderTraining();">−</button><div><small>${etichetta}</small><b id="${id}">${valore}</b></div><button type="button" aria-label="${etichetta}: più" onclick="${piu};renderTraining();">+</button></div>`;
+  const carico = d.versoBanda
+    ? `<div class="adesso5-campo adesso5-bande"><small>${d.versoBanda === 'resistenza' ? 'Elastico' : 'Assistenza'}</small><div>${scalaBanda(d.versoBanda).map(c => `<button type="button" class="adesso5-banda${d.band === c ? ' on' : ''}" onclick="ST.trainAdesso.band='${c.replace(/'/g, "\\'")}';renderTraining();">${esc(c)}</button>`).join('')}</div></div>`
+    : d.conCarico ? `<div class="adesso5-campo adesso5-carico"><button type="button" aria-label="Carico: meno" onclick="adessoCarico(-1);">−</button><div><small>Carico (${unit})</small><b id="adesso5-carico">${d.resist != null ? d.resist : '—'}</b></div><button type="button" aria-label="Carico: più" onclick="adessoCarico(1);">+</button></div>` : '';
+  const reps = d.dueLati
+    ? passo('dx', 'ST.trainAdesso.reps=Math.max(1,(ST.trainAdesso.reps||1)-1)', 'ST.trainAdesso.reps=(ST.trainAdesso.reps||0)+1', d.reps || '—', 'Destro', 'adesso5-reps')
+      + passo('sx', 'ST.trainAdesso.repsSx=Math.max(1,(ST.trainAdesso.repsSx||1)-1)', 'ST.trainAdesso.repsSx=(ST.trainAdesso.repsSx||0)+1', d.repsSx || '—', 'Sinistro', 'adesso5-reps-sx')
+    : passo('', 'ST.trainAdesso.reps=Math.max(1,(ST.trainAdesso.reps||1)-1)', 'ST.trainAdesso.reps=(ST.trainAdesso.reps||0)+1', d.reps || '—', 'Ripetizioni' + perLato, 'adesso5-reps');
+  const rirChip = (v) => `<button type="button" class="adesso5-rir${d.rir === v ? ' on' : ''}" onclick="ST.trainAdesso.rir=${v === null ? 'null' : v};renderTraining();">${v === null ? '—' : v}</button>`;
+  const attrezzo = String(ex.eq || '').toUpperCase();
   return `<div class="adesso5" id="adesso5">
-      <div class="adesso5-sopra">Adesso · blocco ${a.blocco.lettera}${a.voce.riempitivo ? ' · riempitivo leggero' : ''}</div>
-      <div class="adesso5-nome"><span class="adesso5-tag">${a.voce.tag}</span>${esc(nomeCortoConTag(ex.name))}</div>
-      <div class="adesso5-serie">Serie ${a.serie} di ${ex.sets} · ${esc(carico)} · <a href="#" onclick="event.preventDefault();openLogModal('${sel}','${safe}',${d.setNum});">cambia</a></div>
+      <div class="adesso5-sopra">Adesso · blocco ${a.blocco.lettera}${a.voce.riempitivo ? ' · riempitivo leggero' : ''} · serie ${a.serie} di ${ex.sets}</div>
+      <button type="button" class="adesso5-nome" onclick="openExerciseAI('${safe}','${sel}','','')"><span class="adesso5-tag">${a.voce.tag}</span>${esc(nomeCortoConTag(ex.name))} <span class="adesso5-info">ⓘ</span></button>
+      ${attrezzo ? `<div class="adesso5-attrezzo">${esc(attrezzo)}</div>` : ''}
+      ${_rigaSurrogatoHTML(rigaSurrogatoDi(ex), 12)}
+      ${riferimento ? `<div class="adesso5-riferimento" id="adesso5-riferimento">${esc(riferimento)}</div>` : ''}
+      ${nota ? `<div class="adesso5-nota">📝 ${esc(nota)}</div>` : ''}
+      <div class="adesso5-registro">${carico}${d.timed ? '' : reps}</div>
       ${d.timed ? `<button class="adesso5-fatta" onclick="openTrainExec('${sel}','${safe}',${d.setNum});">▶ Inizia la tenuta · ${d.reps || ''} s${perLato}</button>` : `
-      <div class="adesso5-registro">
-        <div class="adesso5-campo"><button type="button" aria-label="Una ripetizione in meno" onclick="ST.trainAdesso.reps=Math.max(1,(ST.trainAdesso.reps||1)-1);renderTraining();">−</button><div><small>Ripetizioni${perLato}</small><b id="adesso5-reps">${d.reps || '—'}</b></div><button type="button" aria-label="Una ripetizione in più" onclick="ST.trainAdesso.reps=(ST.trainAdesso.reps||0)+1;renderTraining();">+</button></div>
-        <div class="adesso5-campo adesso5-rirs"><small>RIR</small><div>${[null, 0, 1, 2, 3].map(rirChip).join('')}</div></div>
-      </div>
+      <div class="adesso5-registro"><div class="adesso5-campo adesso5-rirs"><small>RIR${rirObiettivoOggi != null ? ` · obiettivo ${rirObiettivoOggi}` : ''}</small><div>${[null, 0, 1, 2, 3].map(rirChip).join('')}</div></div></div>
       <button class="adesso5-fatta" id="adesso5-fatta" onclick="fattaAdesso();" ${ST.trainSaving ? 'disabled' : ''}>Fatta ✓</button>`}
+      <a href="#" class="adesso5-registro-pieno" onclick="event.preventDefault();openLogModal('${sel}','${safe}',${d.setNum});">Apri il registro completo</a>
     </div>`;
 }
-// «Fatta»: salva la serie coi numeri della riga (una ripetizione sola per i due lati: si corregge dopo, se serve).
+// «Fatta»: salva la serie coi numeri della riga (carico o elastico, ripetizioni, i due lati, RIR).
 async function fattaAdesso(){
   const d = ST.trainAdesso;
   if(!d || ST.trainSaving) return;
-  if(d.versoBanda && !d.band){ openLogModal(d.sid, d.exName, d.setNum); return; }   // senza elastico scelto si apre il registro
+  if(d.versoBanda && !d.band){ showToast(d.versoBanda === 'resistenza' ? 'Scegli l\'elastico' : 'Scegli il livello di assistenza', '⚠️'); return; }
   ST.trainLogOpen = { sessionId: d.sid, exName: d.exName, setNum: d.setNum };
   ST.trainLogBandColor = d.versoBanda ? d.band : null;
-  ST.trainLogResist = d.versoBanda ? null : d.resist;
-  await saveTrainingSet({ reps: d.reps, repsSx: d.dueLati ? d.reps : null, rir: d.rir });
+  ST.trainLogResist = d.versoBanda ? null : (d.resist != null ? d.resist : null);
+  await saveTrainingSet({ reps: d.reps, repsSx: d.dueLati ? (d.repsSx || d.reps) : null, rir: d.rir });
 }
 // La chiave dell'ultima serie salvata di un esercizio oggi (per «correggi» nel timer)
 function _ultimaChiave(sessionId, exName){
