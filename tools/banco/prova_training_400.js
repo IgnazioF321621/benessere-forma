@@ -18,12 +18,12 @@ const atteso = (nome, got, exp) => {
   const W = b.win;
   const min = (sec) => Math.round(sec / 60);
   const sc = scheda400();
-  const cardiniPrima = sc.sessioni.map(s => s.exercises.filter(e => e.cardine).map(e => `${e.codice}×${e.sets}`));
   const d = W.schedaEntroUnOra(sc.sessioni, { obiettivo:'ricomposizione' });
   atteso('la scheda di prima del 400: ogni seduta sotto l\'ora', [d.every(x => !x.sopra), d.every(x => min(x.dopo) <= 60)], [true, true]);
   atteso('le serie per seduta scendono a circa 20 (150 s l\'una)', d.map(x => x.serie[1] >= 18 && x.serie[1] <= 21), [true, true, true, true]);
-  atteso('i cardini restano com\'erano', sc.sessioni.map(s => s.exercises.filter(e => e.cardine).map(e => `${e.codice}×${e.sets}`)), cardiniPrima);
-  atteso('ogni seduta tiene due core', sc.sessioni.map(s => s.exercises.filter(e => e.pattern === 'core').length), [2, 2, 2, 2]);
+  // dal Training 420 un cardine può prendere una serie in più per il volume, mai perderne
+  atteso('i cardini non perdono serie', sc.sessioni.map(s => s.exercises.filter(e => e.cardine).map(e => e.sets >= 3)).flat().every(Boolean), true);
+  atteso('un core per seduta (Training 420, scelta di Ignazio)', sc.sessioni.map(s => s.exercises.filter(e => e.pattern === 'core').length), [1, 1, 1, 1]);
   atteso('il generatore chiama il tetto dopo la validazione', /schedaEntroUnOra\(sessioniValidate/.test(W.generateTrainingProgram.toString()), true);
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);

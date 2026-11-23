@@ -136,12 +136,46 @@ var ZTRotazione = (function(){
     return next;
   }
 
+  // ── La seduta facoltativa (Training 420, 24 novembre 2026) ──
+  // Ignazio si allena «dipende dalla settimana»: quattro giorni di solito, cinque quando riesce. Le quattro sedute di base
+  // portano ogni muscolo a 10 serie; la Upper Pump (Q.FACOLTATIVA) aggiunge spalle e braccia. Non sta nel giro: si
+  // propone solo quando nella settimana (da lunedì) le sedute di lavoro del giro sono già tutte fatte, oppure nel
+  // quinto giorno scelto della settimana. Una volta a settimana; saltarla non sposta niente (Training 530).
+  var FACOLTATIVA = Q.FACOLTATIVA || 'pump';
+  function lunediDi(key){ return Q.addDays(key, 1 - giornoSettimana(key)); }
+  function lavoriNelGiro(ciclo){ return ciclo.filter(eLavoro).length; }
+  // Quante sedute di lavoro del giro e se la Pump, nella settimana di `key`, prima di `key` (o fino a `key` compreso)
+  function settimana(allenamenti, ciclo, key, compreso){
+    var lun = lunediDi(key), visti = {}, lavori = 0, pump = false;
+    (allenamenti || []).forEach(function(w){
+      if(!w || !w.session_type || !w.date || w.date < lun || (compreso ? w.date > key : w.date >= key)) return;
+      if(w.session_type === FACOLTATIVA){ pump = true; return; }
+      var k = w.date + '|' + w.session_type;
+      if(!visti[k] && eLavoro(w.session_type) && ciclo.indexOf(w.session_type) !== -1){ visti[k] = true; lavori++; }
+    });
+    return { lavori: lavori, pump: pump };
+  }
+  // Il posto di `key` fra i giorni scelti della sua settimana (0 = il primo), o -1
+  function postoNeiGiorni(gs, key){ return gs ? gs.indexOf(giornoSettimana(key)) : -1; }
+  function eTempoDiPump(o, ciclo, lavoriSett, pumpSett, key){
+    if(!o.facoltativa || pumpSett) return false;
+    if(lavoriSett >= lavoriNelGiro(ciclo)) return true;
+    var gs = giorniScelti(o.giorni);
+    return !!(gs && gs.length >= 5 && postoNeiGiorni(gs, key) >= 4);
+  }
+
   // La seduta proposta oggi.
-  //   prossima({ allenamenti, ciclo, oggi, giorni }) → sid
+  //   prossima({ allenamenti, ciclo, oggi, giorni, facoltativa }) → sid
   //   giorni: profiles.train_giorni (Training 540). Nei giorni scelti solo sedute di lavoro; altrimenti il 530.
+  //   facoltativa: la scheda ha la Upper Pump (Training 420); si propone quando è il suo turno (eTempoDiPump)
   function prossima(o){
     o = o || {};
     var ciclo = o.ciclo || CICLO_6, pos = posizione(o.allenamenti, ciclo);
+    if(o.facoltativa && o.oggi){
+      var sett = settimana(o.allenamenti, ciclo, o.oggi, true);
+      var fattoOggi = (o.allenamenti || []).some(function(w){ return w && w.date === o.oggi && eLavoro(w.session_type); });
+      if(!fattoOggi && eTempoDiPump(o, ciclo, sett.lavori, sett.pump, o.oggi)) return FACOLTATIVA;
+    }
     var gs = giorniScelti(o.giorni);
     if(gs && o.oggi && gs.indexOf(giornoSettimana(o.oggi)) !== -1) return prossimoLavoro(pos.indice, ciclo);
     return dopoPosizione(pos, ciclo, o.oggi);
@@ -163,15 +197,25 @@ var ZTRotazione = (function(){
     var fattaOggi = (o.fattaOggi && eLavoro(o.fattaOggi)) ? o.fattaOggi : lavoroOggi;
     if(fattaOggi && ciclo.indexOf(fattaOggi) !== -1) indice = ciclo.indexOf(fattaOggi);
     var totale = (o.settimane || SETTIMANE) * 7, out = [];
+    // la settimana in corso: le sedute già fatte prima di oggi (Training 420, per il turno della Pump)
+    var sett = settimana(o.allenamenti, ciclo, o.oggi, false), lunCorrente = lunediDi(o.oggi);
+    var lavoriSett = sett.lavori, pumpSett = sett.pump;
     for(var n = 0; n < totale; n++){
       var d = Q.addDays(o.oggi, n);
+      if(lunediDi(d) !== lunCorrente){ lunCorrente = lunediDi(d); lavoriSett = 0; pumpSett = false; }
       if(gs.indexOf(giornoSettimana(d)) === -1) continue;
       if(o.profile && Q.pausaAttivaIl(o.profile, d, 'allenamento')) continue;
-      if(n === 0 && fattaOggi){ out.push({ date: d, sid: fattaOggi }); continue; }
+      if(n === 0 && fattaOggi){
+        out.push({ date: d, sid: fattaOggi });
+        if(fattaOggi === FACOLTATIVA) pumpSett = true; else lavoriSett++;
+        continue;
+      }
       if(n === 0 && pos.ultima && pos.ultima.date === o.oggi) continue;   // oggi è già stato fatto un recupero: niente seduta oggi
+      if(eTempoDiPump(o, ciclo, lavoriSett, pumpSett, d)){ out.push({ date: d, sid: FACOLTATIVA }); pumpSett = true; continue; }
       var sid = prossimoLavoro(indice, ciclo);
       out.push({ date: d, sid: sid });
       indice = ciclo.indexOf(sid);
+      lavoriSett++;
     }
     return out;
   }
@@ -267,8 +311,8 @@ var ZTRotazione = (function(){
   //     2010, J Strength Cond Res 24:2632; Weakley et al. 2017; Iversen et al. 2021, Sports Med 51:2079: stesso volume
   //     in meno tempo); quelli di gambe no, ognuno nel suo blocco: due multiarticolari di gambe pesano sugli stessi
   //     muscoli e sul fiato;
-  //   · un multiarticolare da solo prende come compagno un isolamento che non lavora i suoi muscoli, poi un core
-  //     (lo schema A1/A2 di Poliquin);
+  //   · un multiarticolare da solo prende come compagno un isolamento che non lavora i suoi muscoli (lo schema A1/A2
+  //     di Poliquin); mai un core (Training 420, Ignazio: il core abbinato agli affondi non va);
   //   · gli isolamenti che avanzano fanno la rifinitura, a 3 per blocco; quelli in più entrano come riempitivi leggeri
   //     in un blocco di multiarticolari che non lavora i loro muscoli (gli esercizi di riempimento di Cressey);
   //   · il core sta nell'ultimo blocco.
@@ -342,12 +386,12 @@ var ZTRotazione = (function(){
     principali.sort(function(a, b){ return lista.indexOf(a[0]) - lista.indexOf(b[0]); });
     var blocchi = principali.map(function(b){ return b.map(function(ex){ return { ex: ex, riempitivo: false }; }); });
     var isoLiberi = iso.slice(), coreLiberi = core.slice();
-    // un multiarticolare da solo: un compagno che non lavora i suoi muscoli, prima un isolamento, poi un core
+    // un multiarticolare da solo: un compagno che non lavora i suoi muscoli, un isolamento; il core mai (Training 420):
+    // sta nel suo blocco in fondo, a terra, senza niente da sistemare
     blocchi.forEach(function(b){
       if(b.length !== 1) return;
       var c = isoLiberi.filter(function(e){ return !siToccano(e, b[0].ex); })[0];
-      if(c){ isoLiberi.splice(isoLiberi.indexOf(c), 1); b.push({ ex: c, riempitivo: false }); return; }
-      if(coreLiberi.length > 1){ b.push({ ex: coreLiberi.shift(), riempitivo: false }); }
+      if(c){ isoLiberi.splice(isoLiberi.indexOf(c), 1); b.push({ ex: c, riempitivo: false }); }
     });
     // gli isolamenti in più di tre: riempitivi nei blocchi di multiarticolari, prima i più leggeri
     while(isoLiberi.length > 3){
@@ -566,7 +610,7 @@ var ZTRotazione = (function(){
     posizione: posizione, prossima: prossima, sedutePreviste: sedutePreviste, ics: ics,
     URL_TRAINING: URL_TRAINING, DESCRIZIONE_MAX: DESCRIZIONE_MAX, TEMPO: TEMPO,
     leggiReps: leggiReps, contaPerLato: contaPerLato, riscaldamentoSec: riscaldamentoSec, riscaldamentoBreve: riscaldamentoBreve, RISCALDAMENTO_MAX: RISCALDAMENTO_MAX, tabataInCoda: tabataInCoda,
-    durataSeduta: durataSeduta, lavoroSerie: lavoroSerie, blocchi: blocchi, passi: passi, adesso: adesso, pausaVerso: pausaVerso, attrezziDi: attrezziDi, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
+    FACOLTATIVA: FACOLTATIVA, lunediDi: lunediDi, durataSeduta: durataSeduta, lavoroSerie: lavoroSerie, blocchi: blocchi, passi: passi, adesso: adesso, pausaVerso: pausaVerso, attrezziDi: attrezziDi, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
     scaricoPerEventi: scaricoPerEventi,
   };
 })();

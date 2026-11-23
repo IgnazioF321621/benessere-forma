@@ -62,7 +62,8 @@ async function computeTrainHomeData(){
     // (Training 530: la prossima della rotazione dopo l'ultima seduta di lavoro, un recupero conta solo nel suo turno, il
     // riposo solo il giorno stesso; Training 540: nei giorni scelti dalla persona, profiles.train_giorni, solo sedute di
     // lavoro). Fino al 30 ottobre 2026 il calcolo viveva qui; ora il Worker che scrive il calendario usa la stessa funzione.
-    const nextSession = ZTRotazione.prossima({ allenamenti: lastArr || [], ciclo: getRotationCycle(), oggi: today, giorni: ST.profile && ST.profile.train_giorni });
+    const nextSession = ZTRotazione.prossima({ allenamenti: lastArr || [], ciclo: getRotationCycle(), oggi: today, giorni: ST.profile && ST.profile.train_giorni,
+      facoltativa: !!(ST.userTrainingSessions && ST.userTrainingSessions[ZTRotazione.FACOLTATIVA]) });   // Training 420: la Pump quando è il suo turno
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
     const { data: completedArr } = await dbq('leggere gli allenamenti completati', supa.from('workouts')

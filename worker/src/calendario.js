@@ -80,7 +80,8 @@ export async function handleCalendario(request, env) {
       sessioni.forEach((s) => { nomi[s.id] = s.name || s.id; });
       const idSedute = sessioni.map((s) => s.id);
       const oggi = clock.dayKey(Date.now());
-      eventi = ZTRotazione.sedutePreviste({ allenamenti: allenamenti || [], ciclo: ZTRotazione.cicloPer(idSedute), oggi, giorni, profile: p });
+      eventi = ZTRotazione.sedutePreviste({ allenamenti: allenamenti || [], ciclo: ZTRotazione.cicloPer(idSedute), oggi, giorni, profile: p,
+        facoltativa: idSedute.indexOf(ZTRotazione.FACOLTATIVA) !== -1 });   // Training 420: la Upper Pump nel quinto giorno
 
       // il «per lato» degli esercizi che il jsonb della scheda non porta: dal catalogo, per codice (come l'app)
       const perSid = {};

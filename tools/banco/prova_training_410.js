@@ -39,18 +39,17 @@ const atteso = (nome, got, exp) => {
   atteso('i passi: A1, A2, A1, A2… poi il blocco B', passi.slice(0, 7).map(p => blA[p.b].voci[p.v].tag + '·' + p.serie), ['A1·1', 'A2·1', 'A1·2', 'A2·2', 'A1·3', 'A2·3', 'B1·1']);
   atteso('fra due blocchi il timer è la preparazione (2 minuti)', R.pausaVerso(blA, { b:0, v:1 }, { b:1, v:0 }), { sec:120, prepara:true });
   const lowA = R.blocchi(scheda410().sessioni[1]);
-  atteso('Lower A: un multiarticolare di gambe per blocco, ognuno con un compagno che non lavora i suoi muscoli',
-    lowA.map(x => x.voci.map(v => v.ex.codice).join('+')), ['EX644+EX215', 'EX647+EX043', 'EX656+EX021', 'EX133']);
+  atteso('Lower A: un multiarticolare di gambe per blocco, con un isolamento che non lavora i suoi muscoli; il core mai in coppia (Training 420)',
+    lowA.map(x => x.voci.map(v => v.ex.codice).join('+')), ['EX644+EX215', 'EX647+EX043', 'EX656', 'EX021+EX133']);
 
-  // ── il tetto sulla scheda di oggi ──
+  // ── il tetto sulla scheda di oggi (dal Training 420 con la regola D: prova_training_420.js; qui senza catalogo) ──
   const sc = scheda410();
   const d = W.schedaEntroUnOra(sc.sessioni, { obiettivo:'ricomposizione' });
-  atteso('minuti prima → dopo', d.map(x => `${x.sid} ${min(x.prima)}→${min(x.dopo)}`), ['upperA 83→55', 'lowerA 60→58', 'upperB 78→55', 'lowerB 63→58']);
-  atteso('nessuna seduta sopra l\'ora; i cardini con le serie di prima', [d.some(x => x.sopra), sc.sessioni.flatMap(x => x.exercises.filter(e => e.cardine).map(e => e.sets)).every(n => n === 3)], [false, true]);
+  atteso('minuti prima → dopo (senza catalogo non entrano esercizi nuovi)', d.map(x => `${x.sid} ${min(x.prima)}→${min(x.dopo)}`), ['upperA 83→60', 'lowerA 60→53', 'upperB 78→60', 'lowerB 63→53']);
+  atteso('nessuna seduta sopra il tetto; nessun cardine perde serie', [d.some(x => x.sopra), sc.sessioni.flatMap(x => x.exercises.filter(e => e.cardine).map(e => e.sets)).every(n => n >= 3)], [false, true]);
   atteso('ogni esercizio ha la sua lettera, le coppie del 400 non ci sono più', sc.sessioni.every(x => x.exercises.every(e => /^[A-E]$/.test(e.blocco) && e.coppia === undefined)), true);
-  atteso('Upper A: via French press e pull-apart, i due core e la rifinitura a 2 serie', [sc.sessioni[0].exercises.map(e => `${e.blocco}${e.codice}×${e.sets}`)],
-    [['AEX378×3', 'AEX482×3', 'BEX511×2', 'BEX513×3', 'CEX439×2', 'CEX677×2', 'DEX046×2', 'DEX135×2']]);
-  atteso('una scheda già in un\'ora non cambia', W.schedaEntroUnOra(sc.sessioni, { obiettivo:'ricomposizione' }).map(x => x.mosse.length), [0, 0, 0, 0]);
+  atteso('un core per seduta e le trazioni a 2 serie (Training 420)', [sc.sessioni.map(x => x.exercises.filter(e => e.pattern === 'core').length), sc.sessioni.flatMap(x => x.exercises.filter(e => e.pattern === 'tirata verticale').map(e => e.sets))], [[1, 1, 1, 1], [2, 2]]);
+  atteso('una scheda già sistemata non cambia (lo script lanciato due volte)', W.schedaEntroUnOra(sc.sessioni, { obiettivo:'ricomposizione' }).map(x => x.mosse.length), [0, 0, 0, 0]);
 
   // ── la seduta: «Adesso», «Fatta», un timer solo ──
   t.schede_utente.push({ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda:scheda410() });
