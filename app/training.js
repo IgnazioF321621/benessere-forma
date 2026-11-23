@@ -142,31 +142,121 @@ function minutiSeduta(sess, key){
   const sec = ZTRotazione.durataSeduta(sess, { unilaterale: ex => _exInfoCatalogo(ex).unilaterale, tabata: tabataInCoda(key) });
   return ZTRotazione.minutiSeduta(sec);
 }
-// ── Gli esercizi in coppia (Training 400, 20 novembre 2026) ──
-// Due esercizi con lo stesso `coppia` nella scheda si fanno a serie alternate, con una pausa breve fra l'uno e
-// l'altro: il recupero di uno è il lavoro dell'altro. La regola (chi è il compagno, quanto dura la pausa) sta in
-// shared/rotazione.js, la stessa che conta i minuti della seduta.
-function compagnoDi(sessionId, exName){ return ZTRotazione.compagno(getTrainingSession(sessionId), findExercise(exName, sessionId)); }
-function pausaCoppiaDi(sessionId, ex, altro){
-  return ZTRotazione.pausaCoppia(ex, altro, getTrainingSession(sessionId), e => _exInfoCatalogo(e).unilaterale);
+// ── La seduta a blocchi (Training 410, 23 novembre 2026) ──
+// A veste nuova (html.v5) una seduta di lavoro si fa a blocchi: A1, A2… a giri, una serie di ognuno. La regola (quali
+// blocchi, in che ordine, quanto dura la pausa) sta in shared/rotazione.js (ZTRotazione.blocchi / adesso / pausaVerso).
+// In cima alla seduta la riga «Adesso» dice cosa tocca, coi numeri già scritti; «Fatta» salva la serie e fa partire
+// UN timer solo, che dice chi viene dopo. Il timer parte solo dopo che la serie è salvata (feedback 306e9da9 e
+// 160931c9 del 23 novembre: due timer di fila, e le ripetizioni che si potevano scrivere solo dopo il bip).
+function sedutaABlocchi(sessionId){
+  if(!sessionId || !document.documentElement.classList.contains('v5')) return false;
+  const s = getTrainingSession(sessionId);
+  return !!(s && s.type !== 'Recupero' && Array.isArray(s.exercises) && s.exercises.length);
 }
+function blocchiDi(sessionId){ return ZTRotazione.blocchi(getTrainingSession(sessionId), { unilaterale: e => _exInfoCatalogo(e).unilaterale }); }
 function _serieFatteOggi(sessionId, exName){
   return Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(`${sessionId}_${exName}_`) && k.endsWith(`_${todayKey()}`)).length;
 }
-// Finita la serie n di un esercizio in coppia: tocca al compagno? Sì se gli restano serie e non è già avanti
-// (il primo dei due apre il giro, il secondo lo chiude). Ritorna il compagno, o null.
-function toccaAlCompagno(sessionId, exName, n){
-  const sess = getTrainingSession(sessionId), ex = findExercise(exName, sessionId), altro = compagnoDi(sessionId, exName);
-  if(!sess || !ex || !altro) return null;
-  const fatte = _serieFatteOggi(sessionId, altro.name);
-  if(fatte >= (Number(altro.sets) || 0)) return null;
-  const apro = sess.exercises.indexOf(ex) < sess.exercises.indexOf(altro);
-  return fatte < (apro ? n : n + 1) ? altro : null;
+function adessoDi(sessionId, bl){ return ZTRotazione.adesso(bl || blocchiDi(sessionId), e => _serieFatteOggi(sessionId, e.name)); }
+function _dovEDi(bl, exName){
+  for(let b = 0; b < bl.length; b++) for(let v = 0; v < bl[b].voci.length; v++) if(bl[b].voci[v].ex.name === exName) return { b, v };
+  return null;
 }
-function _rigaCoppiaHTML(sessionId, ex){
-  const altro = ex && ex.coppia ? compagnoDi(sessionId, ex.name) : null;
-  if(!altro) return '';
-  return `<div class="ex-coppia-riga" style="font-size:12px;color:var(--t2);font-family:var(--font-sans);font-weight:600;line-height:1.3;margin-top:2px;">⇄ In coppia con ${esc(altro.name)}: una serie a testa, ${pausaCoppiaDi(sessionId, ex, altro)} s di pausa</div>`;
+// Dopo una serie salvata: il timer verso quello che tocca adesso (uno solo).
+function _dopoSerieBlocchi(sessionId, exName){
+  const bl = blocchiDi(sessionId), poi = adessoDi(sessionId, bl);
+  const { sec, prepara } = ZTRotazione.pausaVerso(bl, _dovEDi(bl, exName), poi);
+  if(!poi || !(sec > 0)){ if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; } ST.trainCountdown = null; return; }
+  try{ _unlockAudio(); }catch(e){}
+  try{ playLongBeep(); }catch(e){}
+  const altro = poi.voce.ex.name !== exName;
+  startTrainingCountdown(sec, poi.voce.ex.name, sessionId, { traEsercizi: altro, daEx: exName,
+    blocco: { tag: poi.voce.tag, serie: poi.serie, di: Number(poi.voce.ex.sets) || 0, prepara: prepara ? { lettera: poi.blocco.lettera, attrezzi: poi.blocco.attrezzi } : null } });
+}
+function _attrezziTesto(a){ return (a && a.length) ? a.map(x => x.charAt(0).toUpperCase() + x.slice(1)).join(' · ') : 'Niente: corpo libero'; }
+// La testata di un blocco: lettera, titolo, minuti, cosa preparare, il giro
+function _testaBloccoHTML(b, sel){
+  const tutti = b.voci.every(v => _serieFatteOggi(sel, v.ex.name) >= (Number(v.ex.sets) || 0));
+  const giro = b.voci.length > 1
+    ? `giro di ${restSecToCompact(b.giro)} · ${b.voci[0].pausa} s fra un esercizio e l'altro`
+    : `recupero ${restSecToCompact(b.voci[0].pausa)} fra le serie`;
+  return `<div class="blocco5${tutti ? ' finito' : ''}" id="blocco5-${b.lettera}">
+      <div class="blocco5-testa"><span class="blocco5-lettera">${b.lettera}</span><span class="blocco5-titolo">${esc(b.titolo)}</span><span class="blocco5-min">circa ${b.minuti} min</span></div>
+      <div class="blocco5-prepara"><b>Prepara</b>${esc(_attrezziTesto(b.attrezzi))}</div>
+      <div class="blocco5-giro">${giro}</div>
+    </div>`;
+}
+// Il valore proposto per la serie: le stesse regole del registro (openLogModal), senza aprirlo.
+function _valoriProposti(sessionId, exName, setNum){
+  const today = todayKey();
+  const prevKeys = Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(`${sessionId}_${exName}_`) && k.endsWith(`_${today}`)).sort();
+  const lastKey = prevKeys.pop();
+  const last = lastKey ? ST.trainLoggedSets[lastKey] : null;
+  const versoBanda = bandaDi(exName, sessionId);
+  const ex = findExercise(exName, sessionId);
+  const pr = (ex && ex.reps) ? parseRepsRange(ex.reps) : null;
+  const timed = !!(pr && pr.kind === 'seconds') || !!(ex && ex.isTimed);
+  const dueLati = !!(ex && _exPerLato(ex, pr) && !timed);
+  let band = null, resist = null;
+  if(versoBanda){
+    const lb = last ? (last.band_color || last.resistance) : null;
+    band = (lb && scalaBanda(versoBanda).includes(lb)) ? lb : null;
+  } else {
+    const ini = parseInt(last && last.resistance);
+    resist = (!isNaN(ini) && RESIST_VALUES.includes(ini)) ? ini : null;
+  }
+  let reps = pr ? pr.min : null;
+  const prossima = _prossimaDaCompilare(exName, sessionId, !lastKey);
+  if(prossima){
+    if(versoBanda){ if(prossima.bandColor && scalaBanda(versoBanda).includes(prossima.bandColor)) band = prossima.bandColor; }
+    else if(prossima.resistance != null){ const v = Math.round(Number(prossima.resistance) / 10) * 10; if(RESIST_VALUES.includes(v)) resist = v; }
+    if(prossima.reps != null && prossima.reps > 0) reps = prossima.reps;
+  }
+  return { reps, band, resist, versoBanda, timed, dueLati };
+}
+// La riga «Adesso»: cosa tocca, coi numeri già scritti, e «Fatta».
+function _rigaAdessoHTML(sel, bl){
+  const a = adessoDi(sel, bl);
+  if(!a){
+    return `<div class="adesso5 finita" id="adesso5"><div class="adesso5-sopra">Fatto</div><div class="adesso5-nome">Tutte le serie sono fatte</div><div class="adesso5-serie">Tocca «Completa sessione» qui sotto</div></div>`;
+  }
+  const ex = a.voce.ex, chiave = `${sel}|${ex.name}|${a.serie}`;
+  if(!ST.trainAdesso || ST.trainAdesso.chiave !== chiave){
+    const v = _valoriProposti(sel, ex.name, a.serie);
+    ST.trainAdesso = { chiave, sid: sel, exName: ex.name, setNum: _serieFatteOggi(sel, ex.name) + 1, ...v, rir: null };
+  }
+  const d = ST.trainAdesso;
+  const unit = (ST.profile && ST.profile.unit) || 'lbs';
+  const carico = d.versoBanda ? (d.band ? bandPhraseV(d.band, d.versoBanda) : 'scegli l\'elastico') : (d.resist ? caricoTesto(d.resist) : 'corpo libero');
+  const perLato = _contaPerLato(ex) ? ' per lato' : '';
+  const rirChip = (v) => `<button type="button" class="adesso5-rir${d.rir === v ? ' on' : ''}" onclick="ST.trainAdesso.rir=${v === null ? 'null' : v};renderTraining();">${v === null ? '—' : v}</button>`;
+  const safe = ex.name.replace(/'/g, "\\'");
+  return `<div class="adesso5" id="adesso5">
+      <div class="adesso5-sopra">Adesso · blocco ${a.blocco.lettera}${a.voce.riempitivo ? ' · riempitivo leggero' : ''}</div>
+      <div class="adesso5-nome"><span class="adesso5-tag">${a.voce.tag}</span>${esc(nomeCortoConTag(ex.name))}</div>
+      <div class="adesso5-serie">Serie ${a.serie} di ${ex.sets} · ${esc(carico)} · <a href="#" onclick="event.preventDefault();openLogModal('${sel}','${safe}',${d.setNum});">cambia</a></div>
+      ${d.timed ? `<button class="adesso5-fatta" onclick="openTrainExec('${sel}','${safe}',${d.setNum});">▶ Inizia la tenuta · ${d.reps || ''} s${perLato}</button>` : `
+      <div class="adesso5-registro">
+        <div class="adesso5-campo"><button type="button" aria-label="Una ripetizione in meno" onclick="ST.trainAdesso.reps=Math.max(1,(ST.trainAdesso.reps||1)-1);renderTraining();">−</button><div><small>Ripetizioni${perLato}</small><b id="adesso5-reps">${d.reps || '—'}</b></div><button type="button" aria-label="Una ripetizione in più" onclick="ST.trainAdesso.reps=(ST.trainAdesso.reps||0)+1;renderTraining();">+</button></div>
+        <div class="adesso5-campo adesso5-rirs"><small>RIR</small><div>${[null, 0, 1, 2, 3].map(rirChip).join('')}</div></div>
+      </div>
+      <button class="adesso5-fatta" id="adesso5-fatta" onclick="fattaAdesso();" ${ST.trainSaving ? 'disabled' : ''}>Fatta ✓</button>`}
+    </div>`;
+}
+// «Fatta»: salva la serie coi numeri della riga (una ripetizione sola per i due lati: si corregge dopo, se serve).
+async function fattaAdesso(){
+  const d = ST.trainAdesso;
+  if(!d || ST.trainSaving) return;
+  if(d.versoBanda && !d.band){ openLogModal(d.sid, d.exName, d.setNum); return; }   // senza elastico scelto si apre il registro
+  ST.trainLogOpen = { sessionId: d.sid, exName: d.exName, setNum: d.setNum };
+  ST.trainLogBandColor = d.versoBanda ? d.band : null;
+  ST.trainLogResist = d.versoBanda ? null : d.resist;
+  await saveTrainingSet({ reps: d.reps, repsSx: d.dueLati ? d.reps : null, rir: d.rir });
+}
+// La chiave dell'ultima serie salvata di un esercizio oggi (per «correggi» nel timer)
+function _ultimaChiave(sessionId, exName){
+  return Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(`${sessionId}_${exName}_`) && k.endsWith(`_${todayKey()}`))
+    .sort((a, b) => parseInt(a.split('_').slice(-2)[0]) - parseInt(b.split('_').slice(-2)[0])).pop() || null;
 }
 // Il bersaglio a parole: «12-15 per lato», «20-40 sec per lato»; com'è scritto se l'esercizio non conta per lato.
 function _bersaglioReps(ex){
@@ -1512,7 +1602,7 @@ function startTrainingCountdown(seconds, exName, sessionId, opts){
     // (GIF e consigli servono a prepararlo), daEx quello appena finito (per «APPENA FATTA»).
     traEsercizi: !!(opts && opts.traEsercizi),
     daEx: (opts && opts.daEx) || null,
-    coppia: !!(opts && opts.coppia),   // Training 400: la pausa breve verso il compagno di coppia
+    blocco: (opts && opts.blocco) || null,   // Training 410: { tag, serie, di, prepara } del passo che viene dopo
   };
   // Se recupero ≤5 sec, non emettere prep beep (sarebbero immediati e confusi dopo il GO beep)
   if(seconds <= 5){
@@ -1671,7 +1761,7 @@ function _renderRestStriscia(){
   return `<div id="rest-striscia" style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;background:var(--acc);color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);">
       <button onclick="apriCountdown()" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:none;color:inherit;text-align:left;cursor:pointer;padding:0;">
         <span class="rest-striscia-num" style="font-family:var(--font-mono);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;">${fmt(cd.seconds)}</span>
-        <span style="min-width:0;"><span style="display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;opacity:.85;">${cd.coppia ? 'IN COPPIA · PAUSA' : cd.traEsercizi ? 'PROSSIMO ESERCIZIO · RECUPERO' : 'RECUPERO'}</span><span style="display:block;font-family:var(--font-sans);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cd.exName)} · tocca per aprire</span></span>
+        <span style="min-width:0;"><span style="display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;opacity:.85;">${cd.blocco ? (cd.blocco.prepara ? `PREPARA IL BLOCCO ${cd.blocco.prepara.lettera} · POI ${cd.blocco.tag}` : `POI ${cd.blocco.tag} · SERIE ${cd.blocco.serie} DI ${cd.blocco.di}`) : cd.traEsercizi ? 'PROSSIMO ESERCIZIO · RECUPERO' : 'RECUPERO'}</span><span style="display:block;font-family:var(--font-sans);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cd.exName)} · tocca per aprire</span></span>
       </button>
       <button onclick="skipCountdown()" style="flex-shrink:0;background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Salta</button>
     </div>`;
@@ -2039,7 +2129,7 @@ function _coCostruisci(riga0, orig){
     _originaleOggi: originale,
   };
   if(testi.alert) nuovo.alert = _notaPerSeduta(testi.alert, { reps: orig.reps });   // Training 390
-  ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine', 'coppia'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });   // coppia: Training 400
+  ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine', 'blocco', 'riempitivo'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });   // blocco: Training 410
   if(riga.unilaterale)  nuovo.unilaterale  = String(riga.unilaterale).trim().toLowerCase();
   if(riga.progressione) nuovo.progressione = String(riga.progressione).trim().toLowerCase();
   if(isSurrogato) nuovo.isSurrogato = true;
@@ -3178,7 +3268,28 @@ async function apriRiepilogoSessione(sid, wid){
   const fatte = righe.reduce((a, r) => a + r.fatte, 0), previste = righe.reduce((a, r) => a + r.previste, 0);
   const minuti = ST.trainSessionStart ? Math.max(1, Math.round((Date.now() - ST.trainSessionStart) / 60000)) : null;
   const lavoroSec = (typeof workTimeCurrent === 'function') ? workTimeCurrent(sid) : 0;
-  ST.trainRiepilogo = { sid, wid: wid || null, nome: sess.name, fatte, previste, minuti, lavoroSec, righe, record: righe.filter(r => r.record).length, sensazione: null, nota: '', salvata: false };
+  const misura = await _misuraTempiSeduta(sid);
+  ST.trainRiepilogo = { sid, wid: wid || null, nome: sess.name, fatte, previste, minuti, lavoroSec, righe, record: righe.filter(r => r.record).length, misura, sensazione: null, nota: '', salvata: false };
+}
+// I minuti veri contro la stima (Training 410, 23 novembre 2026): dall'ora della prima all'ultima serie di oggi (le
+// righe di training_logs, o l'ora tenuta in memoria per le serie appena salvate), quanti secondi a serie, e la stima
+// della regola (ZTRotazione.TEMPO.serieMisurata). Così dalla prima seduta a blocchi la stima si ricalibra coi numeri.
+//   → { serie, minuti, secSerie, stimaSec } | null (meno di due serie)
+async function _misuraTempiSeduta(sid){
+  const today = todayKey();
+  let ore = [];
+  if(ST.user && ST.user.id !== 'test-user-001'){
+    const r = await dbq('leggere l\'ora delle serie di oggi', () => supa.from('training_logs').select('created_at')
+      .eq('user_id', ST.user.id).eq('date', today).eq('session_id', sid), { silenzioso: true });
+    ore = ((r && r.data) || []).map(x => Date.parse(x.created_at)).filter(n => !isNaN(n));
+  }
+  if(ore.length < 2){
+    ore = Object.keys(ST.trainLoggedSets || {}).filter(k => k.startsWith(`${sid}_`) && k.endsWith(`_${today}`))
+      .map(k => ST.trainLoggedSets[k] && ST.trainLoggedSets[k].t).filter(n => n > 0);
+  }
+  if(ore.length < 2) return null;
+  const da = Math.min(...ore), a = Math.max(...ore), n = ore.length;
+  return { serie: n, minuti: Math.round((a - da) / 60000), secSerie: Math.round((a - da) / 1000 / (n - 1)), stimaSec: ZTRotazione.TEMPO.serieMisurata };
 }
 function _riepilogoScegli(v){ if(ST.trainRiepilogo){ ST.trainRiepilogo.sensazione = v; renderTraining(); } }
 // Salva com'è andata (se detto) sulla riga dell'allenamento, con la coda senza rete, e chiude.
@@ -3226,6 +3337,7 @@ function _renderRiepilogoSessione(){
         <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">TEMPO</div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:var(--t1);">${esc(tempo)}</div></div>
         <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">RECORD</div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:${r.record ? 'var(--acc)' : 'var(--t3)'};">${r.record || '—'}</div></div>
       </div>
+      ${r.misura ? `<div id="riepilogo-misura" style="font-family:var(--font-mono);font-size:12px;color:var(--t2);background:var(--s1);border-radius:10px;padding:8px 10px;margin-bottom:14px;line-height:1.4;">Dalla prima all'ultima serie: <b style="color:var(--t1);">${r.misura.minuti} min</b> per ${r.misura.serie} serie · a serie <b style="color:var(--t1);">${restSecToCompact(r.misura.secSerie)}</b>, la stima è ${restSecToCompact(r.misura.stimaSec)}</div>` : ''}
       <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:2px;">RISPETTO ALLA VOLTA PRIMA</div>
       ${righe}
       <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin:16px 0 8px;">Com'è andata?</div>
@@ -3248,12 +3360,13 @@ async function deleteWorkout(id, date){
   loadTrainingAllCompleted();
 }
 
-async function saveTrainingSet(){
+async function saveTrainingSet(valori){
+  // valori (Training 410): { reps, repsSx, rir } dalla riga «Adesso», al posto delle tendine del registro
   const form = ST.trainLogOpen;
   if(!form) return;
   const repsEl = document.getElementById('tl-reps');
   const rirEl = document.getElementById('tl-rir');
-  let reps = parseInt(repsEl?.value)||0;
+  let reps = valori ? (parseInt(valori.reps) || 0) : (parseInt(repsEl?.value)||0);
   // Per lato (Training 280): due numeri, destro e sinistro. In `reps` resta il lato più debole,
   // perché è su quello che si misura la progressione (il lato forte non trascina l'altro);
   // i due valori veri vanno in reps_dx e reps_sx.
@@ -3261,7 +3374,7 @@ async function saveTrainingSet(){
   const parsed0 = (exDef0 && exDef0.reps) ? parseRepsRange(exDef0.reps) : null;
   const perLato = !!(exDef0 && _exPerLato(exDef0, parsed0) && !(parsed0 && parsed0.kind === 'seconds') && !exDef0.isTimed);
   const repsSxEl = perLato ? document.getElementById('tl-reps-sx') : null;
-  const repsSx = perLato ? (parseInt(repsSxEl?.value) || 0) : null;
+  const repsSx = perLato ? (valori ? (parseInt(valori.repsSx) || reps) : (parseInt(repsSxEl?.value) || 0)) : null;
   const repsDx = perLato ? reps : null;
   if(perLato){
     if(!repsDx){ repsEl?.focus(); return; }
@@ -3276,7 +3389,7 @@ async function saveTrainingSet(){
   const resistance = isPullUp
     ? (bandColor || '')
     : ((ST.trainLogResist != null) ? String(ST.trainLogResist) : '');
-  const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
+  const rir = valori ? (valori.rir != null ? parseInt(valori.rir, 10) : null) : ((rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null);
   if(!reps){ repsEl?.focus(); return; }
   if(isPullUp && !bandColor){ showToast(versoBanda === 'resistenza' ? 'Scegli l\'elastico' : 'Scegli il livello di assistenza','⚠️'); return; }
   ST.trainSaving = true;
@@ -3305,7 +3418,7 @@ async function saveTrainingSet(){
   const prevKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(form.sessionId+'_')&&k.endsWith('_'+todayKey()));
   if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
-  ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor, setId: riga.id};
+  ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor, setId: riga.id, t: Date.now()};   // t: l'ora, per i minuti veri del riepilogo (Training 410)
   if(perLato){ ST.trainLoggedSets[key].repsDx = repsDx; ST.trainLoggedSets[key].repsSx = repsSx; }
   ST.trainLogDraft = null;
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
@@ -3315,6 +3428,8 @@ async function saveTrainingSet(){
   const sessObj = getTrainingSession(form.sessionId);
   const sKey = `${form.sessionId}_${form.exName}`;
   ST.trainLogOpen = null;
+  ST.trainAdesso = null;   // Training 410: la riga «Adesso» si ricompila sul passo dopo
+  const aBlocchi = sedutaABlocchi(form.sessionId);
 
   // Esercizio completato? La serie appena salvata è l'ultima prevista.
   const exerciseComplete = !!(exData && exData.sets && form.setNum >= exData.sets);
@@ -3381,9 +3496,14 @@ async function saveTrainingSet(){
       if(cand && !isDone(cand)){ nextEx = cand; break; }
     }
 
-    // Training 400: la pausa di coppia è già partita a «Fine serie» e porta al compagno: resta quella
-    const cdCoppia = (ST.trainCountdown && ST.trainCountdown.coppia && !ST.trainCountdown.done) ? findExercise(ST.trainCountdown.exName, form.sessionId) : null;
-    if(cdCoppia) nextEx = cdCoppia;
+    // Training 410: a blocchi il timer (uno) va verso chi tocca nel blocco, non verso il prossimo dell'elenco
+    if(aBlocchi){
+      _dopoSerieBlocchi(form.sessionId, form.exName);
+      renderTraining();
+      const a = adessoDi(form.sessionId);
+      if(a) requestAnimationFrame(() => { const el = document.getElementById('adesso5'); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      return;
+    }
     // Scorri la card del prossimo esercizio in cima (dopo il repaint).
     if(nextEx){
       const cardId = 'excard-' + nextEx.name.replace(/[^a-zA-Z0-9]/g, '_');
@@ -3394,7 +3514,7 @@ async function saveTrainingSet(){
       // Recupero anche FRA un esercizio e l'altro (Training 290): prima il conto partiva solo fra
       // due serie dello stesso esercizio. Durata = il recupero dell'esercizio appena finito;
       // la finestra mostra GIF e consigli del PROSSIMO, così lo si prepara.
-      if(!cdCoppia) startTrainingCountdown(getRestSec(form.sessionId, exData), nextEx.name, form.sessionId, { traEsercizi:true, daEx: form.exName });
+      startTrainingCountdown(getRestSec(form.sessionId, exData), nextEx.name, form.sessionId, { traEsercizi:true, daEx: form.exName });
     }
     return;
   }
@@ -3408,6 +3528,7 @@ async function saveTrainingSet(){
   ST.trainProssima = ST.trainProssima || {};
   if(sugg){ ST.aiSuggestions[sKey] = sugg.testo; ST.trainProssima[sKey] = sugg; }
   else { if(ST.aiSuggestions) delete ST.aiSuggestions[sKey]; delete ST.trainProssima[sKey]; }
+  if(aBlocchi) _dopoSerieBlocchi(form.sessionId, form.exName);   // Training 410: un timer solo, verso chi tocca
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
 }
@@ -4344,9 +4465,13 @@ function renderTraining(){
       // (il primo con serie ancora da fare), i numeri in una riga, «Cambia per oggi» e la nota nel tasto ⋯
       const v5Seduta = !isRecoverySession && document.documentElement.classList.contains('v5');
       const primoDaFare = v5Seduta ? s.exercises.findIndex(e => Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(`${sel}_${e.name}_`) && k.endsWith(`_${today}`)).length < e.sets) : -1;
-      const exerciseCards = isRecoverySession ? _renderRecoverySection(s, sel) : s.exercises.map((e, exIdx)=>{
+      // Training 410: a blocchi (veste nuova) le card stanno sotto la testata del loro blocco, col tag A1, A2…
+      const bl5 = (!isRecoverySession && sedutaABlocchi(sel)) ? blocchiDi(sel) : null;
+      const tag5 = {}, riemp5 = {};
+      if(bl5) bl5.forEach(b => b.voci.forEach(v => { tag5[v.ex.name] = v.tag; if(v.riempitivo) riemp5[v.ex.name] = true; }));
+      const exerciseCardList = isRecoverySession ? null : s.exercises.map((e, exIdx)=>{
         const safeName = e.name.replace(/'/g,"\\'");
-        const exNum = exIdx + 1; // numero progressivo 1, 2, 3 …
+        const exNum = (bl5 && tag5[e.name]) || (exIdx + 1); // numero progressivo 1, 2, 3 …; a blocchi A1, A2… (Training 410)
 
         // Branch NON-RECOVERY: logica esistente
         const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name && !ST.trainCountdown;
@@ -4406,7 +4531,8 @@ function renderTraining(){
         const parsedReps = parseRepsRange(e.reps);
         // e.isTimed è il flag esplicito degli esercizi generati dal coach (durationBased)
         const isTimed = (parsedReps && parsedReps.kind === 'seconds') || !!e.isTimed;
-        const logForm = isOpen ? `
+        // Training 410: a blocchi il registro si apre nella card (prima stava nel foglio del recupero, che lo copriva fino al bip)
+        const logForm = (isOpen && bl5) ? `<div class="ex5-registro-card">${_registroV5(e, nextSet, isTimed, parsedReps, bandaDi(e.name, sel, e), unitLbl, resistOptions)}</div>` : isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
             ${_tlRigaRepsRir(isTimed, parsedReps, _exPerLato(e, parsedReps), _contaPerLato(e, parsedReps))}
@@ -4485,7 +4611,7 @@ function renderTraining(){
                 <span class="ex-params-top">${e.sets} × ${esc(_bersaglioReps(e))}</span>
               </div>
               ${_rigaSurrogatoHTML(rigaSurrogatoDi(e), 12)}
-              ${_rigaCoppiaHTML(sel, e)}
+              ${riemp5[e.name] ? `<div class="ex-riempitivo-riga">Riempitivo leggero: si fa nel recupero degli altri due</div>` : ''}
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
@@ -4513,7 +4639,12 @@ function renderTraining(){
             ${notaHTML}
             ${logForm}
           </div>`;
-      }).join('');
+      });
+      const cardDi = {};
+      if(exerciseCardList) s.exercises.forEach((e, i) => { cardDi[e.name] = exerciseCardList[i]; });
+      const exerciseCards = isRecoverySession ? _renderRecoverySection(s, sel)
+        : bl5 ? _rigaAdessoHTML(sel, bl5) + bl5.map(b => _testaBloccoHTML(b, sel) + b.voci.map(v => cardDi[v.ex.name] || '').join('')).join('')
+        : exerciseCardList.join('');
 
       const audioBanner = ST.audioBlocked
         ? `<div onclick="dismissAudioBanner();" style="background:#FFF7E6;border:1px solid #F0B85A;color:#7A5500;padding:8px 12px;border-radius:8px;font-size:12px;font-family:var(--font-sans);font-weight:600;margin-bottom:12px;cursor:pointer;text-align:center;">🔔 Tocca per attivare l'audio</div>`
@@ -4580,7 +4711,7 @@ function renderTraining(){
 
           ${warmupSection}
 
-          ${v5 ? `<h2 class="sez5">Esercizi · ${s.exercises.length}</h2>` : `<div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>`}
+          ${v5 ? `<h2 class="sez5">${bl5 ? `${bl5.length} blocchi · ${bl5.reduce((a, b) => a + b.serie, 0)} serie · circa ${minutiSeduta(s)} min` : `Esercizi · ${s.exercises.length}`}</h2>` : `<div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>`}
           ${exerciseCards}
           ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0 && tabataInCoda()) ? (() => {
             const fin = s.finisher;
@@ -5359,7 +5490,8 @@ function renderTraining(){
                 <button class="rest-hero-riduci" onclick="riduciCountdown()" aria-label="Riduci il foglio" title="Riduci: il tempo continua">⌄ riduci</button>
               </div>
               ${gifHTML}
-              <span class="rest-hero-cd-label">${cd.coppia ? 'In coppia · pausa ' : cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
+              ${(cd.blocco && cd.daEx && _ultimaChiave(cd.sessionId, cd.daEx)) ? `<button class="rest-hero-correggi" onclick="riduciCountdown();editLog('${_ultimaChiave(cd.sessionId, cd.daEx).replace(/'/g, "\\'")}');">Correggi la serie appena fatta</button>` : ''}
+              <span class="rest-hero-cd-label">${cd.blocco ? (cd.blocco.prepara ? 'Prepara il blocco ' + cd.blocco.prepara.lettera + ' · ' : 'Pausa · ') : cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
             </div>
           </div>
           <div class="rest-modal-body">
@@ -5409,7 +5541,7 @@ function renderTraining(){
                 if(cd.traEsercizi){
                   return `<div class="rest-row-cards rest-row-cards--una">
                   <div class="rest-card rest-card--next">
-                    <span class="rest-card-eyebrow">${cd.coppia ? `ORA TOCCA A · SERIE ${savedN2 + 1}` : 'PRIMA SERIE'} · ${nomeCortoConTag(cd.exName)}</span>
+                    <span class="rest-card-eyebrow">${cd.blocco ? `POI ${cd.blocco.tag} · SERIE ${cd.blocco.serie} DI ${cd.blocco.di}` : 'PRIMA SERIE'} · ${nomeCortoConTag(cd.exName)}</span>
                     ${nextHTML}
                   </div>
                 </div>`;
@@ -6259,12 +6391,15 @@ function trainExecFinishSet(){
     .length;
   const _nextSet = _doneCount + 1; // la serie che stiamo per loggare
   const _hasNextAfter = !!(_exDef && _exDef.sets && (_nextSet + 1) <= _exDef.sets);
-  // Training 400: in coppia, dopo la serie tocca al compagno, con la pausa breve della coppia
-  const _altro = toccaAlCompagno(e.sessionId, e.exName, _nextSet);
-  if(_altro){
-    try{ _unlockAudio(); }catch(e2){}
-    try{ playLongBeep(); }catch(e2){}
-    startTrainingCountdown(pausaCoppiaDi(e.sessionId, _exDef, _altro), _altro.name, e.sessionId, { traEsercizi:true, daEx: e.exName, coppia:true });
+  // Training 410: a blocchi il timer parte dopo il salvataggio (uno solo, verso chi tocca): qui niente
+  if(sedutaABlocchi(e.sessionId)){
+    // la tenuta l'ha misurata il cronometro: si salva subito coi numeri della riga «Adesso», senza il registro
+    if(e.isTimed && ST.trainAdesso && ST.trainAdesso.exName === e.exName){
+      ST.trainExecOpen = null;
+      ST.trainAdesso.reps = timedTarget || ST.trainAdesso.reps;
+      fattaAdesso();
+      return;
+    }
   } else if(_hasNextAfter){
     try{ _unlockAudio(); }catch(e2){}
     try{ playLongBeep(); }catch(e2){}

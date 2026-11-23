@@ -145,7 +145,7 @@ atteso('390 · riscaldamentoBreve: fino a 3 voci com\'è; 6 voci → la 1ª, la 
 const profili = [{ tabata: 'coda' }, { tabata: 'giorni', tabata_giorni: [4] }, { tabata: 'giorni', tabata_giorni: ['1', 7] }, { tabata: 'a_parte' }, { tabata: 'spento' }, { tabata: 'boh' }, {}, null];
 const giorniT = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'];
 atteso('541 · tabataInCoda risponde come quella di prima su 8 profili × 7 giorni', profili.flatMap(p => giorniT.map(g => [R.tabataInCoda(p, g), vecchia.tabataInCoda(p, g)])).filter(([a, b]) => a !== b).length, 0);
-atteso('541 · i tempi: attivazione = il blocco fisso (2 + 2 + 1 min), serie 30 s (di ripiego), cambio 20 s (Training 400), Tabata 300 s', [R.TEMPO.attivazione, R.TEMPO.serie, R.TEMPO.cambio, R.TEMPO.finisher, R.TEMPO.voce, R.TEMPO.riposoVoce, R.TEMPO.lato, R.TEMPO.pausaLato], [300, 30, 20, 300, 50, 10, 20, 5]);
+atteso('541 · i tempi: attivazione = il blocco fisso (2 + 2 + 1 min), serie misurata 150 s e preparazione di un blocco 120 s (Training 410), Tabata 300 s', [R.TEMPO.attivazione, R.TEMPO.serieMisurata, R.TEMPO.prepara, R.TEMPO.finisher, R.TEMPO.voce, R.TEMPO.riposoVoce, R.TEMPO.lato, R.TEMPO.pausaLato], [300, 150, 120, 300, 50, 10, 20, 5]);
 
 // una seduta come la Upper A di Ignazio (forza, 3 minuti di recupero)
 const ES = (codice, name, sets, reps, rest_sec, extra) => ({ codice, name, sets, reps, rest_sec, ...(extra || {}) });
@@ -154,20 +154,19 @@ const UA = { id: 'upperA', name: 'Upper A', rest: '3 min', warmup: [{ reps: '15-
     ES('EX3', 'Croci inverse elastico', 3, '12-15', 75), ES('EX4', 'Pallof press con elastico', 3, '20-40 sec', 60, { isTimed: true }), ES('EX5', 'Russian twist', 3, '12-15', 75)],
   finisher: { round: 8, work_sec: 20, rest_sec: 10, exercises: [{ name: 'Burpee' }] } };
 const uniUA = (ex) => ({ EX4: 'si', EX5: 'alternato' })[ex.codice] || null;
-// Coi tempi veri del Training 400 (3 s a ripetizione + 15 per registrare, il recupero dopo ogni serie, 20 s di cambio):
-// 300 + 170 + 4 × (3 × (33 + 180) + 20) + (3 × (60 + 75) + 20) + (3 × (80 + 60) + 20) + (3 × (105 + 75) + 20) − 75 (dopo l'ultima serie) = 4456 s
-atteso('541 · durata Upper A: 470 + 4 × 659 + 425 + 440 + 560 − 75 = 4456 s → circa 75 minuti', [R.durataSeduta(UA, { unilaterale: uniUA }), R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA }))], [4456, 75]);
-atteso('541 · col Tabata del giorno: + 240 + 20 s = 4716 s → circa 80 minuti', R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA, tabata: true })), 80);
-atteso('541 · senza recupero scritto si usa quello della seduta («3 min»), poi 90 s', [R.durataSeduta({ rest: '3 min', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ rest: '90 sec', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ exercises: [{ sets: 3, reps: '4-6' }] })], [300 + 99 + 360 + 20, 300 + 99 + 180 + 20, 300 + 99 + 180 + 20]);
+// Dal Training 410 la durata si conta a serie coi tempi misurati: 300 + 170 + 21 serie × 150 s = 3620 s
+atteso('541 · durata Upper A: 300 + 170 + 21 × 150 = 3620 s → circa 60 minuti (Training 410)', [R.durataSeduta(UA, { unilaterale: uniUA }), R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA }))], [3620, 60]);
+atteso('541 · col Tabata del giorno: + 240 s = 3860 s → circa 65 minuti', R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA, tabata: true })), 65);
+atteso('541 · il recupero scritto non cambia la durata: dal Training 410 si conta a serie', [R.durataSeduta({ rest: '3 min', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ rest: '90 sec', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ exercises: [{ sets: 3, reps: '4-6' }] })], [300 + 450, 300 + 450, 300 + 450]);
 atteso('541 · minuti ai 5 più vicini, almeno 5', [0, 100, 449, 450, 3020, 3350].map(R.minutiSeduta), [5, 5, 5, 10, 50, 55]);
 atteso('541 · righe: serie × ripetizioni, per lato dove si conta per lato, secondi delle tenute', R.righeSeduta(UA, { unilaterale: uniUA }).slice(4), ['5. Croci inverse elastico — 3 × 12-15', '6. Pallof press con elastico — 3 × 20-40 sec per lato', '7. Russian twist — 3 × 12-15 per lato']);
 atteso('541 · righe in scarico: il minimo dell\'intervallo, come la prima serie in computeNextSetSuggestion', R.righeSeduta(UA, { unilaterale: uniUA, scarico: true }).filter((_, i) => [0, 5, 6].includes(i)), ['1. Rematore — 3 × 4', '6. Pallof press con elastico — 3 × 20 sec per lato', '7. Russian twist — 3 × 12 per lato']);
 atteso('541 · descrizione: durata, scarico, preparazione, esercizi, Tabata', R.descrizione(UA, { unilaterale: uniUA, scarico: true, tabata: true }).split('\n').filter((_, i, a) => i < 3 || i === a.length - 1),
-  ['Circa 80 minuti', 'Settimana di scarico: carichi più leggeri, RIR 3+', 'Preparazione 5 min e riscaldamento (3 esercizi)', 'Tabata in coda: 8 round, 4 min']);
+  ['Circa 65 minuti', 'Settimana di scarico: carichi più leggeri, RIR 3+', 'Preparazione 5 min e riscaldamento (3 esercizi)', 'Tabata in coda: 8 round, 4 min']);
 const LUNGA = { exercises: Array.from({ length: 40 }, (_, i) => ES('EX' + i, 'Esercizio, con virgole; e accènti numero ' + i, 3, '8-12', 90)) };
 const dl = R.descrizione(LUNGA, {}), dlScappata = dl.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 atteso('541 · seduta lunga: con «DESCRIPTION:» sotto 1000 ottetti scappati, finisce con «…», righe intere', [Buffer.byteLength('DESCRIPTION:' + dlScappata, 'utf8') <= 1000, Buffer.byteLength(dlScappata, 'utf8') > 900, dl.split('\n').pop(), dl.split('\n').slice(2, -1).every(r => /— 3 × 8-12$/.test(r))], [true, true, '…', true]);
-atteso('541 · se nemmeno la testa ci sta, resta la prima riga', R.descrizione(UA, { scarico: true, maxOttetti: 60 }), 'Circa 70 minuti');
+atteso('541 · se nemmeno la testa ci sta, resta la prima riga', R.descrizione(UA, { scarico: true, maxOttetti: 60 }), 'Circa 60 minuti');
 atteso('541 · seduta corta: niente «…»', R.descrizione(UA, {}).includes('…'), false);
 
 // la settimana di scarico sulle sedute previste

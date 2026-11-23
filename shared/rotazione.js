@@ -53,7 +53,6 @@ var ZTRotazione = (function(){
   // I tempi della seduta, in secondi (Training 541). Erano nel generatore (_TRAIN_GEN_TIME_BUDGET) e nel flusso del
   // riscaldamento (WARMUP_*): adesso stanno qui, una volta, e il generatore, il riscaldamento e il calendario li leggono.
   //   attivazione  il blocco fisso d'apertura (ACTIVATION_BLOCK: 2 + 2 + 1 minuti)
-  //   cambio       quello che il passaggio a un altro esercizio prende oltre al recupero
   //   finisher     il Tabata, se la scheda non ne scrive i round
   //   voce, riposoVoce, lato, pausaLato   il riscaldamento: 60 s a voce, 10 s fra le voci, 30 s per lato e 5 per cambiare
   // Il riscaldamento specifico dura al massimo 3 minuti (Training 390, 17 novembre 2026, segnalazione di Ignazio 3e11a3d8:
@@ -61,19 +60,17 @@ var ZTRotazione = (function(){
   // Prima dei pesi basta un riscaldamento breve e specifico, senza fatica: Fradkin, Zazryn e Smoliga 2010 (J Strength Cond
   // Res 24:140), McGowan et al. 2015 (Sports Med 45:1523). Le serie di avvicinamento le fa la prima serie leggera.
   //
-  // I tempi delle serie sono tarati sui tempi veri (Training 400, 20 novembre 2026). Nelle quattro sedute del 17-20
-  // novembre 2026 di Ignazio (74 serie in training_logs, l'intervallo fra un salvataggio e il successivo):
-  //   · fra due serie dello stesso esercizio passano il recupero scritto più 35 s a 4-6 ripetizioni e 65 s a 12-15
-  //     (la serie dura più dei 30 s di prima e poi va registrata): 3 s a ripetizione più 15 s per registrare;
-  //   · fra l'ultima serie di un esercizio e la prima del successivo passa il recupero INTERO dell'esercizio finito
-  //     (l'app fa partire «Prossimo esercizio · recupero») più una quindicina di secondi: prima si contava un cambio
-  //     di 60 s al posto del recupero, e Upper A usciva 79 minuti invece di 100. La sistemazione dell'attrezzo
-  //     (agganciare l'elastico, spostare la panca) sta dentro quel recupero: `cambio` è quello che avanza.
-  // Con questi numeri la stima delle quattro sedute supera la durata vera del 2-6%.
-  //   ripetizione, registro   una ripetizione e il tempo di registrare la serie
-  //   serie                   una serie di cui non si leggono le ripetizioni
-  //   coppia, coppiaMulti     la pausa più corta fra i due esercizi di una coppia (accessori · multiarticolari)
-  var TEMPO = { attivazione: 300, serie: 30, ripetizione: 3, registro: 15, cambio: 20, coppia: 30, coppiaMulti: 45,
+  // La durata di una seduta si misura a serie (Training 410, 23 novembre 2026). Nei log di Ignazio una serie prende
+  // circa 150 secondi con tutto il resto: la serie, registrarla, la pausa, spostarsi, preparare l'attrezzo
+  // (17 novembre: 63 minuti per 23 serie; 23 novembre: 20 serie dalle 7:40 alle 8:31). È il numero su cui si
+  // dimensiona la seduta finché una seduta col flusso a blocchi non dice altro: il riepilogo di fine seduta mette i
+  // secondi veri a serie accanto a questi (Training 410). Il conto a ripetizioni del Training 400 (3 s a ripetizione,
+  // il recupero scritto, i cambi) dava 2-6% sopra il vero solo dove le pause erano lunghe; resta per le pause del giro.
+  //   serieMisurata   una serie con tutto quello che le sta intorno
+  //   prepara         il tempo per sistemare l'attrezzo di un blocco, nel timer fra un blocco e l'altro
+  //   ripetizione, registro, serie   il lavoro di una serie, per le pause dentro un blocco (lavoroSerie)
+  //   pausaMinima     la pausa più corta fra due esercizi di un blocco: il tempo di spostarsi
+  var TEMPO = { attivazione: 300, serieMisurata: 150, prepara: 120, serie: 30, ripetizione: 3, registro: 15, pausaMinima: 15,
     finisher: 300, voce: 50, riposoVoce: 10, lato: 20, pausaLato: 5 };
   var RISCALDAMENTO_VOCI = 3, RISCALDAMENTO_MAX = 180;
   var RECUPERO_PARTENZA = 90;                // il recupero fra le serie quando la scheda non lo scrive
@@ -261,55 +258,192 @@ var ZTRotazione = (function(){
     return TEMPO.serie * lati;
   }
 
-  // ── Gli esercizi in coppia (Training 400) ──
-  // Due esercizi con lo stesso `coppia` nella scheda si fanno a serie alternate: una serie del primo, una pausa
-  // breve, una del secondo, una pausa breve. Ogni muscolo riposa mentre lavora l'altro: la pausa è quella che
-  // serve perché fra due serie dello STESSO esercizio passi almeno il suo recupero scritto, e mai meno di 30 s
-  // (45 s se nella coppia c'è un multiarticolare). Robbins et al. 2010 (J Strength Cond Res 24:2632, spinta e
-  // tirata alternate: stesso volume in metà tempo), Weakley et al. 2017 (Eur J Appl Physiol 117:1877), Paz et al.
-  // 2017 (J Strength Cond Res 31:2777).
-  function compagno(sess, ex){
-    if(!sess || !ex || !ex.coppia) return null;
-    var altri = (sess.exercises || []).filter(function(e){ return e && e !== ex && e.coppia === ex.coppia; });
-    return altri.length === 1 ? altri[0] : null;
+  // ── La seduta a blocchi (Training 410, 23 novembre 2026) ──
+  // Ignazio: le coppie gli piacciono, ma «non si capiva niente». La seduta si divide in 3-5 blocchi, uno dopo l'altro.
+  // In un blocco gli esercizi (A1, A2, A3) si fanno a giri: una serie di ognuno, poi di nuovo il primo. Il giro dura
+  // almeno il recupero scritto dell'esercizio che riposa di più, così fra due serie dello STESSO esercizio passa sempre
+  // il suo recupero; le pause fra un esercizio e l'altro sono quello che avanza, mai meno del tempo di spostarsi.
+  //   · i multiarticolari dell'Upper vanno in coppia spinta e tirata, sullo stesso piano quando c'è (Robbins et al.
+  //     2010, J Strength Cond Res 24:2632; Weakley et al. 2017; Iversen et al. 2021, Sports Med 51:2079: stesso volume
+  //     in meno tempo); quelli di gambe no, ognuno nel suo blocco: due multiarticolari di gambe pesano sugli stessi
+  //     muscoli e sul fiato;
+  //   · un multiarticolare da solo prende come compagno un isolamento che non lavora i suoi muscoli, poi un core
+  //     (lo schema A1/A2 di Poliquin);
+  //   · gli isolamenti che avanzano fanno la rifinitura, a 3 per blocco; quelli in più entrano come riempitivi leggeri
+  //     in un blocco di multiarticolari che non lavora i loro muscoli (gli esercizi di riempimento di Cressey);
+  //   · il core sta nell'ultimo blocco.
+  // La scheda può scrivere il blocco di ogni esercizio (`blocco`: 'A', 'B'…, e `riempitivo`); se non lo scrive, i
+  // blocchi si ricavano con questa regola. Ogni blocco dice cosa preparare: gli attrezzi dei suoi esercizi.
+  var GRUPPI_DEL_PATTERN = {
+    'spinta orizzontale': ['petto', 'tricipiti', 'deltoidi anteriori'], 'spinta verticale': ['deltoidi anteriori', 'tricipiti', 'deltoidi laterali'],
+    'tirata orizzontale': ['dorsali', 'bicipiti', 'deltoidi posteriori'], 'tirata verticale': ['dorsali', 'bicipiti'],
+    'dominante ginocchia': ['quadricipiti', 'glutei'], 'dominante anca': ['glutei', 'ischiocrurali']
+  };
+  var LETTERE = 'ABCDEFGH';
+  var LEGGERI = ['deltoidi posteriori', 'polpacci', 'deltoidi laterali'];   // i riempitivi d'elezione: poca fatica, nessun carico sulla schiena
+  function patternDi(ex){ return String((ex && ex.pattern) || '').toLowerCase().trim(); }
+  function gruppiDi(ex){
+    var pat = patternDi(ex);
+    if(GRUPPI_DEL_PATTERN[pat]) return GRUPPI_DEL_PATTERN[pat].slice();
+    return String((ex && ex.gruppo_target) || '').toLowerCase().split(';').map(function(x){ return x.trim(); }).filter(Boolean);
   }
-  function pausaCoppia(a, b, sess, unilaterale){
-    var uni = typeof unilaterale === 'function' ? unilaterale : function(){ return null; };
-    var serve = Math.max(recuperoSec(a, sess) - lavoroSerie(b, uni(b)), recuperoSec(b, sess) - lavoroSerie(a, uni(a)));
-    var minima = (a.iso && b.iso) ? TEMPO.coppia : TEMPO.coppiaMulti;
-    return Math.max(minima, Math.ceil(serve / 2 / 5) * 5);
+  function eCore(ex){ return patternDi(ex) === 'core'; }
+  function eMulti(ex){ return !!ex && !ex.iso && !eCore(ex) && patternDi(ex) !== 'isolamento'; }
+  function siToccano(a, b){ var ga = gruppiDi(a); return gruppiDi(b).some(function(g){ return ga.indexOf(g) !== -1; }); }
+  function piano(ex){ return patternDi(ex).replace(/^(spinta|tirata)\s*/, ''); }
+
+  // Gli attrezzi da preparare: quelli scritti in `eq`, senza il corpo libero, nell'ordine in cui arrivano.
+  function attrezziDi(esercizi){
+    var out = [];
+    esercizi.forEach(function(ex){
+      String((ex && ex.eq) || '').split(/[+,;]/).forEach(function(a){
+        a = a.trim().toLowerCase();
+        if(a && a !== 'corpo libero' && out.indexOf(a) === -1) out.push(a);
+      });
+    });
+    return out;
+  }
+  function titoloBlocco(voci){
+    var multi = voci.filter(function(v){ return eMulti(v.ex); }).map(function(v){ return v.ex; });
+    if(multi.length >= 2){
+      var p = piano(multi[0]);
+      if(multi.every(function(m){ return piano(m) === p; }) && p) return 'Spinta e tirata ' + (p === 'orizzontale' ? 'orizzontali' : p === 'verticale' ? 'verticali' : p);
+      return 'Spinta e tirata';
+    }
+    if(multi.length === 1){
+      var pat = patternDi(multi[0]);
+      return pat === 'dominante ginocchia' ? 'Ginocchia' : pat === 'dominante anca' ? 'Anca' : pat.charAt(0).toUpperCase() + pat.slice(1);
+    }
+    if(voci.every(function(v){ return eCore(v.ex); })) return 'Core';
+    return 'Rifinitura';
   }
 
-  // Quanto dura una seduta, in secondi: attivazione + riscaldamento + per ogni esercizio le serie (lavoroSerie) e
-  // il recupero dopo OGNI serie, anche l'ultima (è il recupero verso l'esercizio dopo), più il cambio + il Tabata
-  // se c'è quel giorno. Due esercizi in coppia: i giri alternati con la pausa breve, le serie che avanzano a uno
-  // dei due come da soli, un cambio solo. Dopo l'ultima serie della seduta non c'è recupero.
-  //   durataSeduta(sess, { unilaterale: function(ex) → 'si'|'alternato'|..., tabata: bool })
+  // I blocchi ricavati dagli esercizi (quando la scheda non li scrive): [[{ex, riempitivo}], …]
+  function ricavaBlocchi(lista){
+    var multi = lista.filter(eMulti), iso = lista.filter(function(e){ return !eMulti(e) && !eCore(e); }), core = lista.filter(eCore);
+    var principali = [], usati = [];
+    var upper = multi.some(function(m){ return /^spinta/.test(patternDi(m)); }) && multi.some(function(m){ return /^tirata/.test(patternDi(m)); });
+    if(upper){
+      var spinte = multi.filter(function(m){ return /^spinta/.test(patternDi(m)); }), tirate = multi.filter(function(m){ return /^tirata/.test(patternDi(m)); });
+      // prima le coppie sullo stesso piano, poi spinta e tirata qualsiasi
+      spinte.forEach(function(sp){
+        var ti = tirate.filter(function(t){ return usati.indexOf(t) === -1 && piano(t) === piano(sp); })[0];
+        if(ti){ principali.push([sp, ti]); usati.push(sp, ti); }
+      });
+      spinte.forEach(function(sp){
+        if(usati.indexOf(sp) !== -1) return;
+        var ti = tirate.filter(function(t){ return usati.indexOf(t) === -1; })[0];
+        if(ti){ principali.push([sp, ti]); usati.push(sp, ti); }
+      });
+    }
+    multi.forEach(function(m){ if(usati.indexOf(m) === -1){ principali.push([m]); usati.push(m); } });
+    // nell'ordine della scheda (il primo esercizio di ogni blocco), ogni coppia nell'ordine della scheda
+    principali.forEach(function(b){ b.sort(function(x, y){ return lista.indexOf(x) - lista.indexOf(y); }); });
+    principali.sort(function(a, b){ return lista.indexOf(a[0]) - lista.indexOf(b[0]); });
+    var blocchi = principali.map(function(b){ return b.map(function(ex){ return { ex: ex, riempitivo: false }; }); });
+    var isoLiberi = iso.slice(), coreLiberi = core.slice();
+    // un multiarticolare da solo: un compagno che non lavora i suoi muscoli, prima un isolamento, poi un core
+    blocchi.forEach(function(b){
+      if(b.length !== 1) return;
+      var c = isoLiberi.filter(function(e){ return !siToccano(e, b[0].ex); })[0];
+      if(c){ isoLiberi.splice(isoLiberi.indexOf(c), 1); b.push({ ex: c, riempitivo: false }); return; }
+      if(coreLiberi.length > 1){ b.push({ ex: coreLiberi.shift(), riempitivo: false }); }
+    });
+    // gli isolamenti in più di tre: riempitivi nei blocchi di multiarticolari, prima i più leggeri
+    while(isoLiberi.length > 3){
+      var leggero = isoLiberi.slice().sort(function(a, b){
+        var la = LEGGERI.indexOf(gruppiDi(a)[0]), lb = LEGGERI.indexOf(gruppiDi(b)[0]);
+        return (la === -1 ? 99 : la) - (lb === -1 ? 99 : lb);
+      })[0];
+      var dove = blocchi.filter(function(b){ return b.length < 3 && b.every(function(v){ return !siToccano(v.ex, leggero); }); })[0];
+      if(!dove) break;
+      isoLiberi.splice(isoLiberi.indexOf(leggero), 1);
+      dove.push({ ex: leggero, riempitivo: true });
+    }
+    for(var k = 0; k < isoLiberi.length; k += 3) blocchi.push(isoLiberi.slice(k, k + 3).map(function(ex){ return { ex: ex, riempitivo: false }; }));
+    for(var c2 = 0; c2 < coreLiberi.length; c2 += 3) blocchi.push(coreLiberi.slice(c2, c2 + 3).map(function(ex){ return { ex: ex, riempitivo: false }; }));
+    return blocchi.filter(function(b){ return b.length; });
+  }
+
+  // La seduta a blocchi:
+  //   blocchi(sess, { unilaterale }) → [{ lettera, titolo, voci:[{ ex, tag, riempitivo, pausa }], attrezzi, giro, serie, minuti }]
+  //   giro: i secondi di un giro (una serie di ogni voce); pausa: dopo la serie di quella voce, verso la successiva del giro.
+  //   Un blocco di un esercizio solo ha come pausa il suo recupero scritto.
+  function blocchi(sess, o){
+    o = o || {};
+    var uni = typeof o.unilaterale === 'function' ? o.unilaterale : function(){ return null; };
+    var lista = ((sess && sess.exercises) || []).filter(function(e){ return e && Number(e.sets) > 0; });
+    if(!lista.length) return [];
+    var gruppi;
+    if(lista.every(function(e){ return e.blocco; })){
+      var ordine = [];
+      lista.forEach(function(e){ if(ordine.indexOf(e.blocco) === -1) ordine.push(e.blocco); });
+      ordine.sort();
+      gruppi = ordine.map(function(l){ return lista.filter(function(e){ return e.blocco === l; }).map(function(e){ return { ex: e, riempitivo: !!e.riempitivo }; }); });
+    } else gruppi = ricavaBlocchi(lista);
+    return gruppi.map(function(voci, bi){
+      var lettera = LETTERE.charAt(bi) || String(bi + 1);
+      var lavori = voci.map(function(v){ return lavoroSerie(v.ex, uni(v.ex)); });
+      var lavoro = lavori.reduce(function(a, b){ return a + b; }, 0);
+      var giro, pause;
+      if(voci.length === 1){
+        giro = lavori[0] + recuperoSec(voci[0].ex, sess);
+        pause = [recuperoSec(voci[0].ex, sess)];
+      } else {
+        var serve = Math.max.apply(null, voci.filter(function(v){ return !v.riempitivo; }).map(function(v){ return recuperoSec(v.ex, sess); }).concat([0]));
+        giro = Math.max(serve, lavoro + voci.length * TEMPO.pausaMinima);
+        var p = Math.max(TEMPO.pausaMinima, Math.ceil((giro - lavoro) / voci.length / 5) * 5);   // per eccesso: il giro non scende sotto il recupero
+        pause = voci.map(function(){ return p; });
+        giro = lavoro + p * voci.length;
+      }
+      var serie = voci.reduce(function(a, v){ return a + Number(v.ex.sets); }, 0);
+      return {
+        lettera: lettera, titolo: titoloBlocco(voci), attrezzi: attrezziDi(voci.map(function(v){ return v.ex; })),
+        voci: voci.map(function(v, i){ return { ex: v.ex, tag: lettera + (i + 1), riempitivo: v.riempitivo, pausa: pause[i] }; }),
+        giro: giro, serie: serie, minuti: Math.round(serie * TEMPO.serieMisurata / 60)
+      };
+    });
+  }
+  // I passi della seduta in ordine: blocco per blocco, giro per giro, una serie di ogni voce che ne ha ancora.
+  //   passi(bl) → [{ b, v, serie }]   (b, v: indici nel blocco e nella voce; serie: 1, 2, 3…)
+  function passi(bl){
+    var out = [];
+    bl.forEach(function(b, bi){
+      var giri = Math.max.apply(null, b.voci.map(function(v){ return Number(v.ex.sets) || 0; }));
+      for(var g = 1; g <= giri; g++) b.voci.forEach(function(v, vi){ if(g <= Number(v.ex.sets)) out.push({ b: bi, v: vi, serie: g }); });
+    });
+    return out;
+  }
+  // Il passo da fare adesso, con quante serie ha fatto ogni esercizio: fatte(ex) → numero.
+  //   adesso(bl, fatte) → { b, v, serie, voce, blocco, indice } | null (seduta finita)
+  // Il primo passo la cui serie non è ancora fatta: chi salta una serie o fa un esercizio fuori ordine non rompe niente.
+  function adesso(bl, fatte){
+    var ps = passi(bl);
+    for(var i = 0; i < ps.length; i++){
+      var v = bl[ps[i].b].voci[ps[i].v];
+      if(fatte(v.ex) < ps[i].serie) return { b: ps[i].b, v: ps[i].v, serie: ps[i].serie, voce: v, blocco: bl[ps[i].b], indice: i };
+    }
+    return null;
+  }
+  // Il timer dopo una serie: verso il passo che viene adesso, sapendo da dove si arriva.
+  //   pausaVerso(bl, da: {b, v}, poi: passo | null) → { sec, prepara: bool }
+  // Nello stesso blocco la pausa della voce appena fatta; in un blocco nuovo il tempo per prepararlo; finita, niente.
+  function pausaVerso(bl, da, poi){
+    if(!poi) return { sec: 0, prepara: false };
+    if(!da || da.b !== poi.b) return { sec: TEMPO.prepara, prepara: true };
+    return { sec: bl[da.b].voci[da.v].pausa, prepara: false };
+  }
+
+  // Quanto dura una seduta, in secondi: attivazione + riscaldamento + ogni serie a TEMPO.serieMisurata (serie,
+  // registrazione, pause, spostamenti e preparazione compresi) + il Tabata se c'è quel giorno.
+  //   durataSeduta(sess, { tabata: bool })
   // Il carry conclusivo della scheda non si conta: l'app non lo mostra nella seduta.
   function durataSeduta(sess, o){
     o = o || {};
     if(!sess) return 0;
-    var uni = typeof o.unilaterale === 'function' ? o.unilaterale : function(){ return null; };
-    var t = TEMPO.attivazione + riscaldamentoSec(sess.warmup);
-    var lista = (sess.exercises || []).filter(Boolean), fatti = [], ultimo = 0;
-    var serie = function(ex){ return Math.max(0, Number(ex.sets) || 0); };
-    lista.forEach(function(ex){
-      if(fatti.indexOf(ex) !== -1) return;
-      var n = serie(ex), lav = lavoroSerie(ex, uni(ex)), rec = recuperoSec(ex, sess), altro = compagno(sess, ex);
-      if(altro && fatti.indexOf(altro) === -1 && n && serie(altro)){
-        var m = serie(altro), lavB = lavoroSerie(altro, uni(altro)), recB = recuperoSec(altro, sess);
-        var giri = Math.min(n, m), pausa = pausaCoppia(ex, altro, sess, uni);
-        t += giri * (lav + lavB + 2 * pausa) + (n - giri) * (lav + rec) + (m - giri) * (lavB + recB) + TEMPO.cambio;
-        ultimo = n > giri ? rec : m > giri ? recB : pausa;
-        fatti.push(altro);
-      } else if(n){
-        t += n * (lav + rec) + TEMPO.cambio;
-        ultimo = rec;
-      }
-      fatti.push(ex);
-    });
-    t -= ultimo;
-    if(o.tabata && haFinisher(sess)) t += tabataSec(sess.finisher) + TEMPO.cambio;
+    var serie = (sess.exercises || []).filter(Boolean).reduce(function(a, ex){ return a + Math.max(0, Number(ex.sets) || 0); }, 0);
+    var t = TEMPO.attivazione + riscaldamentoSec(sess.warmup) + serie * TEMPO.serieMisurata;
+    if(o.tabata && haFinisher(sess)) t += tabataSec(sess.finisher);
     return t;
   }
   // I minuti da mostrare: ai 5 più vicini, almeno 5.
@@ -432,7 +566,7 @@ var ZTRotazione = (function(){
     posizione: posizione, prossima: prossima, sedutePreviste: sedutePreviste, ics: ics,
     URL_TRAINING: URL_TRAINING, DESCRIZIONE_MAX: DESCRIZIONE_MAX, TEMPO: TEMPO,
     leggiReps: leggiReps, contaPerLato: contaPerLato, riscaldamentoSec: riscaldamentoSec, riscaldamentoBreve: riscaldamentoBreve, RISCALDAMENTO_MAX: RISCALDAMENTO_MAX, tabataInCoda: tabataInCoda,
-    durataSeduta: durataSeduta, lavoroSerie: lavoroSerie, compagno: compagno, pausaCoppia: pausaCoppia, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
+    durataSeduta: durataSeduta, lavoroSerie: lavoroSerie, blocchi: blocchi, passi: passi, adesso: adesso, pausaVerso: pausaVerso, attrezziDi: attrezziDi, minutiSeduta: minutiSeduta, righeSeduta: righeSeduta, descrizione: descrizione,
     scaricoPerEventi: scaricoPerEventi,
   };
 })();
