@@ -360,9 +360,10 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('seduta spenta: niente testata nuova, l\'intestazione dell\'app, le linguette in alto, «ESERCIZI» di prima', [sp.testa, sp.header !== 'none', sp.linguetteSopra, sp.vecchioEsercizi, sp.sezioni], [null, true, true, true, []]);
       atteso('seduta accesa: testata della zona Training (#2E6DA4) al posto dell\'intestazione dell\'app', [se.testa, se.header], ['rgb(46, 109, 164)', 'none']);
       atteso('seduta accesa: le linguette dentro la testata, un cronometro solo', [se.linguetteSopra, se.cronometro], [false, 1]);
-      atteso('seduta accesa: i titoli di sezione nell\'HTML, nell\'ordine', se.sezioni, ['Prima di iniziare', 'Esercizi · 2']);
+      atteso('seduta accesa: i titoli di sezione nell\'HTML, nell\'ordine (dal Training 410 la seduta è a blocchi)', se.sezioni, ['Prima di iniziare', '2 blocchi · 6 serie · circa 20 min']);
       atteso('seduta accesa, giro 2: nella testata della seduta niente fuoco, peso, ⚙ ed Esci (solo «‹ I tuoi giorni»)', se.chipSeduta, 0);
-      atteso('serie in corso e recupero: le testate nel blu della zona', [sr.serieTesta, rg.recupero], ['rgb(46, 109, 164)', 'rgb(46, 109, 164)']);
+      // dal Training 410 «Fine serie» non apre il recupero: il registro sta nella card e il timer parte dopo il salvataggio
+      atteso('serie in corso nel blu della zona; dopo «Fine serie» nessun recupero sopra il registro (Training 410)', [sr.serieTesta, rg.recupero], ['rgb(46, 109, 164)', null]);
       for(const [nome, m] of [['seduta', se], ['serie in corso', sr], ['recupero e registro', rg]]){
         atteso(`${nome}: ogni testo della testata (e del registro) almeno 4,5:1`, m.testi, []);
         atteso(`${nome}: ogni tasto alto almeno 44 px (${m.nTasti} tasti)`, m.tasti, []);

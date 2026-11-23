@@ -59,4 +59,27 @@ function scheda400() {
     ].map(riga) },
   ] };
 }
-module.exports = { scheda400 };
+// La stessa scheda com'è nel database dal Rilascio 95 (20 novembre 2026, dopo il Training 400): quarte serie tolte,
+// recupero della Lower A a 150 s, le coppie del 400. È il punto di partenza del Training 410.
+function scheda410() {
+  const s = scheda400();
+  const DOPO = {
+    upperA: { EX378: [3, 180, 0, 5], EX482: [3, 180, 0, 5], EX511: [3, 180, 0, 4], EX513: [3, 180, 0, 4], EX027: [3, 75, 1, 3], EX030: [3, 75, 1, 3], EX439: [3, 75, 0, 2], EX677: [3, 75, 1, 2], EX046: [3, 60, 0, 1], EX135: [3, 75, 0, 1] },
+    lowerA: { EX644: [3, 150, 0], EX647: [3, 150, 0], EX656: [3, 150, 0], EX043: [3, 75, 1, 2], EX215: [3, 75, 1, 2], EX021: [3, 60, 0, 1], EX133: [3, 75, 0, 1] },
+    upperB: { EX076: [3, 90, 0, 4], EX383: [3, 90, 0, 4], EX510: [3, 90, 0, 3], EX514: [3, 90, 0, 3], EX055: [3, 75, 0], EX328: [4, 75, 0, 2], EX057: [3, 75, 1, 2], EX137: [3, 75, 0, 1], EX174: [3, 60, 0, 1] },
+    lowerB: { EX648: [3, 90, 0], EX652: [3, 90, 0], EX663: [3, 90, 0], EX215: [4, 75, 0], EX561: [3, 75, 0], EX148: [3, 75, 0, 1], EX164: [3, 60, 0, 1] },
+  };
+  // l'attrezzo mostrato (`eq`) com'è nella scheda vera: serve a «Prepara»
+  const EQ = { EX482: 'elastico+panca', EX511: 'sbarra', EX046: 'fitball', EX135: 'corpo libero', EX647: 'corpo libero', EX656: 'corpo libero', EX043: 'fitball',
+    EX215: 'corpo libero', EX021: 'corpo libero', EX133: 'corpo libero', EX076: 'elastico+panca', EX383: 'corpo libero', EX510: 'sbarra', EX514: 'corpo libero',
+    EX137: 'corpo libero', EX174: 'corpo libero', EX652: 'corpo libero', EX663: 'corpo libero', EX561: 'corpo libero', EX148: 'corpo libero', EX164: 'panca' };
+  s.sessioni.forEach(sess => sess.exercises.forEach(ex => {
+    if (EQ[ex.codice]) ex.eq = EQ[ex.codice];
+    const [sets, rest, tolte, coppia] = DOPO[sess.id][ex.codice];
+    ex.sets = sets; ex.rest_sec = rest;
+    if (tolte) ex.serieTolte = tolte;
+    if (coppia) ex.coppia = coppia;
+  }));
+  return s;
+}
+module.exports = { scheda400, scheda410 };
